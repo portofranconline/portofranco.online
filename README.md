@@ -18,7 +18,9 @@ Porto Franco Online/
 ├── sql/
 │   ├── 01-estrutura.sql        tabelas, funções e regras (vai para o GitHub)
 │   └── 02-dados-iniciais.sql   dados dos clientes (SÓ no Mac)
-└── excel/                      planilhas atualizadas (SÓ no Mac)
+├── excel/                      planilhas atualizadas (SÓ no Mac)
+├── copias/                     cópias dos dados baixadas do sistema (SÓ no Mac)
+└── ACESSOS.md                  links, URL e chave publicável (SÓ no Mac)
 ```
 
 ## Onde fica cada coisa
@@ -36,6 +38,10 @@ Porto Franco Online/
 5. **Mac:** o Claude atualiza esta pasta com a mesma versão do GitHub.
 
 Para trazer mudanças feitas no Excel para o sistema: **Tabelas › Subir Excel** (usa a planilha baixada em Tabelas).
+
+## Tela inicial
+- Destaque de **vencidos** e **a vencer** da Publicidade e do Painel de LED (mesma regra da aba Vencimentos).
+- Botões **Exportar Excel**, **Enviar propostas** (copiar links e WhatsApp), **Configurações** e **Baixar cópia dos dados** (arquivo .json usado para atualizar os artefatos no Claude).
 
 ## Acesso
 Só o **Administrador** vê e altera Publicidade, Painel de LED e Tabelas, cria logins e envia as propostas. As propostas abrem para o cliente sem login.

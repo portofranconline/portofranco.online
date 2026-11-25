@@ -184,6 +184,16 @@
       b.href = BASE; b.textContent = "☰ Menu";
       b.setAttribute("style", "position:fixed;left:10px;bottom:10px;z-index:99;background:#0b1f3a;color:#fff;padding:9px 14px;border-radius:999px;font:700 13px system-ui,sans-serif;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.25)");
       document.body.appendChild(b);
+      // ?baixar=xl : baixa o Excel completo assim que os dados carregarem
+      if (new URLSearchParams(location.search).get("baixar") === "xl") {
+        var tentativas = 0;
+        var t = setInterval(function () {
+          tentativas++;
+          var bt = document.getElementById("xl"), hk = document.getElementById("hk");
+          if (bt && hk && hk.children.length) { clearInterval(t); setTimeout(function () { bt.click(); }, 400); history.replaceState(null, "", location.pathname); }
+          else if (tentativas > 60) clearInterval(t);
+        }, 500);
+      }
     });
   }
 })();
