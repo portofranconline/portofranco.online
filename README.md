@@ -10,8 +10,6 @@ Porto Franco Online/
 ├── shim.js               ligação das telas com o banco (login e dados)
 ├── baixar.js             downloads nas propostas
 ├── tabelas.html          tabelas como Excel + modelos do Excel completo
-├── instagram.html        métricas do @portofranco.online (alcance, engajamento, 30 dias)
-├── supabase/functions/instagram/index.ts   função que consulta a API oficial do Instagram
 ├── publicidade/          Porto Franco Online Publicidade (só administrador)
 ├── painel/               Painel de LED (só administrador)
 ├── propostas/
@@ -19,7 +17,6 @@ Porto Franco Online/
 │   └── painel/           Proposta Painel de LED (aberta ao cliente)
 ├── sql/
 │   ├── 01-estrutura.sql        tabelas, funções e regras (vai para o GitHub)
-│   ├── 03-instagram.sql        tabela do token renovado do Instagram
 │   └── 02-dados-iniciais.sql   dados dos clientes (SÓ no Mac)
 ├── excel/                      planilhas atualizadas (SÓ no Mac)
 ├── copias/                     cópias dos dados baixadas do sistema (SÓ no Mac)
@@ -45,10 +42,6 @@ Para trazer mudanças feitas no Excel para o sistema: **Tabelas › Subir Excel*
 ## Tela inicial
 - Destaque de **vencidos** e **a vencer** da Publicidade e do Painel de LED (mesma regra da aba Vencimentos).
 - Botões **Exportar Excel**, **Enviar propostas** (copiar links e WhatsApp), **Configurações** e **Baixar cópia dos dados** (arquivo .json usado para atualizar os artefatos no Claude).
-
-## Instagram @portofranco.online
-Botão **Atualizar análise** → seguidores, alcance, visualizações, visitas ao perfil, contas engajadas e interações dos últimos 30 dias, alcance por dia e por publicação, melhores publicações e evolução entre análises.
-Usa a **API do Instagram com Login do Instagram** (sem Facebook). Precisa do segredo `IG_TOKEN` na função `instagram` do Supabase e do `sql/03-instagram.sql`. O token é renovado sozinho a cada 7 dias.
 
 ## Acesso
 Só o **Administrador** vê e altera Publicidade, Painel de LED e Tabelas, cria logins e envia as propostas. As propostas abrem para o cliente sem login.
