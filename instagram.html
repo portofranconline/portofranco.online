@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Análise de Instagram · Porto Franco Online</title>
+<link rel="icon" href="logo.png">
+<script>window.PFO_PROTEGIDA=true</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="shim.js"></script>
+<style>
+:root{--bg:#f2f5fa;--tx:#0b1f3a;--mu:#5b6b7f;--cy:#0b7285;--rd:#c62828}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:70px}
+header{background:linear-gradient(120deg,#5b2a86,#c13584 55%,#f77737);color:#fff;padding:18px 16px;border-radius:0 0 22px 22px}
+header h1{font-size:19px;margin:0}header small{opacity:.9}
+main{max-width:860px;margin:auto;padding:12px}
+.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 1px 3px rgba(11,31,58,.08)}
+input{width:100%;padding:13px;border-radius:12px;border:1px solid #c9d6e6;font:inherit}
+.btn{border:0;border-radius:12px;padding:13px 14px;background:linear-gradient(135deg,#c13584,#f77737);color:#fff;font-weight:800;width:100%;margin-top:10px;font:inherit;font-weight:800;cursor:pointer}
+.btn:disabled{opacity:.6}.btn.g{background:#e7edf6;color:var(--tx)}
+.mu{color:var(--mu);font-size:13px}.err{color:var(--rd);font-weight:700}
+.pf{display:flex;gap:14px;align-items:center}.pf img{width:68px;height:68px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 3px #f77737}
+.pf b{font-size:17px}.kp{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}@media(min-width:640px){.kp{grid-template-columns:repeat(4,1fr)}}
+.kp div{border-radius:14px;padding:12px;background:#f6f0fb}.kp span{font-size:11.5px;font-weight:800;color:var(--mu);text-transform:uppercase}.kp b{display:block;font-size:22px}
+.nota{border-radius:14px;padding:14px;margin-top:12px;font-weight:700}.n-ot{background:#dcf5ea;color:#12805c}.n-bo{background:#fff4d6;color:#8a5a00}.n-ba{background:#fde0e0;color:#b3261e}
+.bars{display:flex;align-items:flex-end;gap:4px;height:150px;margin-top:12px;border-bottom:1px solid #e6ecf4}
+.bars a{flex:1;display:block;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#f77737,#c13584);min-height:3px}
+.ps{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}.ps a{display:block;text-decoration:none;color:var(--tx);background:#f7f9fc;border-radius:12px;overflow:hidden;font-size:12px}
+.ps img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#e7edf6}.ps span{display:block;padding:6px}
+.hi{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eef2f8;font-size:13.5px}.hi:last-child{border:0}
+.hi button{border:0;background:none;color:var(--cy);font-weight:800;cursor:pointer;font:inherit}
+ol{padding-left:20px}ol li{margin:6px 0}code{background:#eef2f8;padding:1px 5px;border-radius:5px;font-size:12.5px}
+</style>
+</head>
+<body>
+<header><h1>📈 Análise de Instagram</h1><small>Engajamento das publicações dos últimos 30 dias</small></header>
+<main>
+<div class="card"><b>Cole o link do perfil</b><p class="mu">Ex.: https://www.instagram.com/portofranco.online/ ou só @portofranco.online</p>
+ <input id="lk" placeholder="https://www.instagram.com/usuario/" autocapitalize="none" autocomplete="off">
+ <button class="btn" id="go">🔍 Analisar perfil</button><div class="err" id="er"></div></div>
+<div id="res"></div>
+<div class="card" id="hist"><b>🕘 Análises anteriores</b><p class="mu">Carregando…</p></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const n=v=>(v==null?"—":Number(v).toLocaleString("pt-BR"));
+const pc=v=>(Math.round(v*100)/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
+function usuario(t){t=String(t||"").trim();const m=/instagram\.com\/([A-Za-z0-9._]+)/i.exec(t);if(m)t=m[1];return t.replace(/^@/,"").replace(/\/.*$/,"").toLowerCase()}
+
+function analisar(p){
+  const agora=Date.now(),lim=agora-30*864e5,media=(p.media||[]).filter(x=>x.timestamp);
+  let posts=media.filter(x=>new Date(x.timestamp).getTime()>=lim),janela="últimos 30 dias";
+  if(!posts.length){posts=media.slice(0,12);janela="últimas "+posts.length+" publicações (nenhuma nos últimos 30 dias)"}
+  const seg=p.followers_count||0,lik=posts.reduce((s,x)=>s+(x.like_count||0),0),com=posts.reduce((s,x)=>s+(x.comments_count||0),0);
+  const er=posts.map(x=>seg?((x.like_count||0)+(x.comments_count||0))/seg*100:0);
+  const media_er=er.length?er.reduce((a,b)=>a+b,0)/er.length:0;
+  const top=posts.map((x,i)=>({...x,er:er[i]})).sort((a,b)=>b.er-a.er).slice(0,3);
+  return {posts,janela,seg,lik,com,media_er,top,porSemana:posts.length/(janela==="últimos 30 dias"?30/7:Math.max(1,(agora-new Date(posts[posts.length-1]?.timestamp||agora))/(7*864e5)))}}
+function nota(er){if(er>=3)return["n-ot","🟢 Engajamento ótimo (acima de 3%)"];if(er>=1)return["n-bo","🟡 Engajamento bom (entre 1% e 3%)"];return["n-ba","🔴 Engajamento baixo (abaixo de 1%)"]}
+
+function mostrar(p,quando){
+  const a=analisar(p),[cl,tx]=nota(a.media_er),mx=Math.max(...a.posts.map(x=>(x.like_count||0)+(x.comments_count||0)),1);
+  $("#res").innerHTML=`<div class="card"><div class="pf">${p.profile_picture_url?`<img src="${esc(p.profile_picture_url)}" alt="" referrerpolicy="no-referrer">`:""}<div><b>@${esc(p.username)}</b><div class="mu">${esc(p.name||"")}</div><div class="mu">Analisado em ${new Date(quando||Date.now()).toLocaleString("pt-BR")}</div></div></div>
+   <div class="kp"><div><span>Seguidores</span><b>${n(a.seg)}</b></div><div><span>Engajamento médio</span><b>${pc(a.media_er)}</b></div>
+   <div><span>Publicações</span><b>${a.posts.length}</b><small class="mu">${n(Math.round(a.porSemana*10)/10)} por semana</small></div><div><span>Curtidas + coment.</span><b>${n(a.lik+a.com)}</b><small class="mu">${n(a.lik)} ❤ · ${n(a.com)} 💬</small></div></div>
+   <div class="nota ${cl}">${tx}<div class="mu" style="font-weight:500">Base: ${a.janela}. Engajamento = (curtidas + comentários) ÷ seguidores, média por publicação.</div></div></div>
+   ${a.posts.length?`<div class="card"><b>📊 Interações por publicação</b><p class="mu">Da mais antiga para a mais recente. Toque numa barra para abrir a publicação.</p>
+    <div class="bars">${a.posts.slice().reverse().map(x=>`<a href="${esc(x.permalink)}" target="_blank" title="${new Date(x.timestamp).toLocaleDateString("pt-BR")}: ${n(x.like_count)} curtidas, ${n(x.comments_count)} comentários" style="height:${Math.max(2,((x.like_count||0)+(x.comments_count||0))/mx*100)}%"></a>`).join("")}</div></div>
+   <div class="card"><b>🏆 Melhores publicações</b><div class="ps">${a.top.map(x=>`<a href="${esc(x.permalink)}" target="_blank"><img src="${esc(x.thumbnail_url||x.media_url||"")}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'"><span><b>${pc(x.er)}</b><br>${n(x.like_count)} ❤ · ${n(x.comments_count)} 💬<br>${new Date(x.timestamp).toLocaleDateString("pt-BR")}</span></a>`).join("")}</div></div>`:""}`}
+
+async function historico(){
+  try{const r=await PFO.client().from("app_docs").select("id,data,updated_at").like("id","instagram/%");if(r.error)throw r.error;
+    const l=(r.data||[]).sort((a,b)=>b.updated_at<a.updated_at?-1:1);
+    $("#hist").innerHTML='<b>🕘 Análises anteriores</b>'+(l.length?l.map(x=>{const a=analisar(x.data.perfil);return `<div class="hi"><span><b>@${esc(x.data.perfil.username)}</b> · ${pc(a.media_er)} · ${n(a.seg)} seguidores<br><small class="mu">${new Date(x.data.em).toLocaleString("pt-BR")}</small></span><button data-u="${esc(x.id)}">ver</button></div>`}).join(""):'<p class="mu">Nenhuma análise ainda.</p>');
+    $("#hist").onclick=e=>{const b=e.target.closest("button[data-u]");if(!b)return;const d=l.find(x=>x.id===b.dataset.u);mostrar(d.data.perfil,d.data.em);scrollTo({top:0,behavior:"smooth"})}}
+  catch(e){$("#hist").innerHTML='<b>🕘 Análises anteriores</b><p class="mu">Sem acesso.</p>'}}
+
+const AJUDA=`<div class="card"><b>⚙️ Falta ligar a ferramenta ao Instagram</b><p class="mu">A análise usa a API oficial da Meta (Business Discovery). Ela só funciona uma vez configurada:</p>
+<ol><li>Deixe o @portofranco.online como conta <b>Profissional</b> (Criador ou Empresa) e ligue a uma <b>Página do Facebook</b>.</li>
+<li>Em <b>developers.facebook.com</b>, crie um app do tipo <b>Empresa</b> e gere um <b>token de acesso de longa duração</b> com as permissões <code>instagram_basic</code>, <code>pages_show_list</code> e <code>business_management</code>.</li>
+<li>No Supabase, crie a função <b>instagram</b> com o arquivo <code>supabase/functions/instagram/index.ts</code> da pasta do sistema.</li>
+<li>Em <b>Edge Functions › Secrets</b>, cadastre <code>IG_USER_ID</code> (ID da sua conta do Instagram) e <code>IG_TOKEN</code> (o token).</li></ol>
+<p class="mu">Só dá para analisar perfis <b>Profissionais</b> (Criador ou Empresa). Contas pessoais não aparecem pela API.</p></div>`;
+
+$("#go").onclick=async()=>{const u=usuario($("#lk").value);$("#er").textContent="";if(!u)return $("#er").textContent="Cole o link do perfil.";
+  $("#go").disabled=true;$("#go").textContent="Analisando @"+u+"…";
+  try{const r=await PFO.client().functions.invoke("instagram",{body:{username:u}});
+    if(r.error){const st=r.error.context&&r.error.context.status;if(st===404||/not found|Failed to send/i.test(r.error.message||""))throw{ajuda:true};
+      let m=r.error.message;try{const j=await r.error.context.json();m=j.erro||m}catch(_){}throw new Error(m)}
+    const p=r.data&&r.data.perfil;if(!p)throw new Error((r.data&&r.data.erro)||"Resposta vazia.");
+    mostrar(p);await PFO.db.doc("instagram/"+u).set({perfil:p,em:new Date().toISOString()});historico()}
+  catch(e){if(e&&e.ajuda)$("#res").innerHTML=AJUDA;else $("#er").textContent=(e&&e.message)||String(e)}
+  finally{$("#go").disabled=false;$("#go").textContent="🔍 Analisar perfil"}};
+$("#lk").addEventListener("keydown",e=>{if(e.key==="Enter")$("#go").click()});
+(async()=>{const db=await window.claude.use("db");if(db)historico()})();
+</script>
+</body>
+</html>

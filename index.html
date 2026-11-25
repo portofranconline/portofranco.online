@@ -47,6 +47,15 @@ button{font:inherit;cursor:pointer}
 .vt{font-size:12px;font-weight:800;border-radius:8px;padding:6px 10px;margin-bottom:4px}.vt.ve{background:#fde0e0;color:#b3261e}.vt.av{background:#ffefd2;color:#9a5a00}
 .vl{display:flex;justify-content:space-between;gap:8px;padding:8px 2px;border-bottom:1px solid #eef2f8}.vl span{font-weight:700;font-size:13.5px}.vl small{display:block;font-weight:500;color:var(--mu);font-size:12px}.vl b{white-space:nowrap;font-size:13.5px}
 a.btn.lk{display:block;text-align:center;text-decoration:none}textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #c9d6e6;font:inherit}
+.ab{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+details.dv{border-radius:14px;overflow:hidden}details.dv[open]{grid-column:1/-1}
+details.dv summary{list-style:none;display:flex;align-items:center;gap:10px;padding:12px;cursor:pointer;color:#fff;border-radius:14px}
+details.dv summary::-webkit-details-marker{display:none}
+details.dv.ve summary{background:linear-gradient(135deg,#b3261e,#e2574c)}details.dv.av summary{background:linear-gradient(135deg,#ef8f00,#ffb74d)}
+details.dv .ico{font-size:22px;width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.22);display:grid;place-items:center;flex:none}
+details.dv .tx{flex:1;font-size:12.5px;font-weight:700;line-height:1.2}details.dv .tx b{font-size:22px;margin-right:4px}details.dv .tx small{display:block;font-size:12px;opacity:.95}
+details.dv .sw{transition:transform .2s;font-size:18px}details.dv[open] .sw{transform:rotate(180deg)}
+details.dv .dl{background:#fff;border:1px solid #eef2f8;border-top:0;padding:4px 10px 8px;max-height:360px;overflow:auto;border-radius:0 0 14px 14px}
 </style>
 </head>
 <body>
@@ -116,6 +125,7 @@ function menu(p){
    ${LINKS.map((l,i)=>`<div class="li"><div class="sp"><b>${l[0]}</b><br><span class="mu">${esc(linkDe(l[1]))}</span></div><button class="btn g" data-cp="${i}">Copiar link</button></div>`).join("")}
    <div class="row2"><button class="btn g" id="cpall">📋 Copiar os dois links</button><a class="btn lk" id="wa" target="_blank" rel="noopener" style="background:#25d366">💬 Enviar no WhatsApp</a></div></div>
   <div class="card" id="us"><b>👥 Logins de acesso</b><p class="mu">Carregando…</p></div>
+  <a class="mod mini" href="instagram.html"><div class="ic">📈</div><div><b>Análise de Instagram</b><span>Cole o link do perfil e veja o engajamento dos últimos 30 dias</span></div><i>›</i></a>
   <a class="mod mini" href="tabelas.html"><div class="ic">📊</div><div><b>Tabelas (como Excel)</b><span>Editar à mão, baixar em Excel e subir de volta</span></div><i>›</i></a>
   <div class="card" id="cfg"><b>⚙️ Configurações</b>
    <label>Avisar "a vencer" com quantos dias de antecedência</label><input id="cdias" type="number" min="1" max="31">
@@ -176,9 +186,13 @@ async function painelVenc(){
      <div class="card"><b>📊 Vencidos x a vencer</b>${res.map(r=>`<div class="gr"><div class="gt">${r.m[1]} ${r.m[0]}</div>
        ${barra(r.a.venc.reduce((x,y)=>x+y.valor,0),"linear-gradient(90deg,#e2574c,#b3261e)")}${barra(r.a.avenc.reduce((x,y)=>x+y.valor,0),"linear-gradient(90deg,#ffb74d,#ef8f00)")}</div>`).join("")}
        <div class="leg"><span><i style="background:#c62828"></i>Vencidos</span><span><i style="background:#ef8f00"></i>A vencer</span></div></div>
-     ${res.map(r=>`<div class="card vc"><div class="vh"><b>${r.m[1]} ${r.m[0]}</b><a href="${r.m[3]}">abrir ›</a></div>
-       <div class="vg"><div><div class="vt ve">🔴 Vencidos · ${r.a.venc.length}</div>${r.a.venc.length?r.a.venc.map(x=>`<div class="vl"><span>${esc(x.nome)}<small>${x.meses.length?x.meses.join(", "):"negativado"}</small></span><b>${brl(x.valor)}</b></div>`).join(""):'<p class="mu">Nenhum vencido 🎉</p>'}</div>
-       <div><div class="vt av">🟠 A vencer · ${r.a.avenc.length}</div>${r.a.avenc.length?r.a.avenc.map(x=>`<div class="vl"><span>${esc(x.nome)}<small>${x.dias===0?"vence hoje":"em "+x.dias+(x.dias===1?" dia":" dias")} · ${x.data.toLocaleDateString("pt-BR")}</small></span><b>${brl(x.valor)}</b></div>`).join(""):'<p class="mu">Nada vencendo nos próximos dias.</p>'}</div></div></div>`).join("")}`}
+     ${res.map(r=>{const tv=r.a.venc.reduce((x,y)=>x+y.valor,0),ta=r.a.avenc.reduce((x,y)=>x+y.valor,0);return `<div class="card vc"><div class="vh"><b>${r.m[1]} ${r.m[0]}</b><a href="${r.m[3]}">abrir ›</a></div>
+       <div class="ab">
+        <details class="dv ve"><summary><span class="ico">🔴</span><span class="tx"><b>${r.a.venc.length}</b> vencidos<small>${brl(tv)}</small></span><span class="sw">▾</span></summary>
+         <div class="dl">${r.a.venc.length?r.a.venc.map(x=>`<div class="vl"><span>${esc(x.nome)}<small>${x.meses.length?x.meses.join(", "):"negativado"}</small></span><b>${brl(x.valor)}</b></div>`).join(""):'<p class="mu">Nenhum vencido 🎉</p>'}</div></details>
+        <details class="dv av"><summary><span class="ico">🟠</span><span class="tx"><b>${r.a.avenc.length}</b> a vencer<small>${brl(ta)}</small></span><span class="sw">▾</span></summary>
+         <div class="dl">${r.a.avenc.length?r.a.avenc.map(x=>`<div class="vl"><span>${esc(x.nome)}<small>${x.dias===0?"vence hoje":"em "+x.dias+(x.dias===1?" dia":" dias")} · ${x.data.toLocaleDateString("pt-BR")}</small></span><b>${brl(x.valor)}</b></div>`).join(""):'<p class="mu">Nada vencendo nos próximos dias.</p>'}</div></details>
+       </div></div>`}).join("")}`}
   catch(e){box.innerHTML='<div class="card err">Não consegui carregar os vencimentos: '+esc(msgErro(e))+'</div>'}}
 function trocaSenha(){$("#tsn").onclick=async()=>{const v=$("#ns").value;if(v.length<6)return toast("Use pelo menos 6 caracteres.");const r=await sb().auth.updateUser({password:v});toast(r.error?msgErro(r.error):"Senha alterada.");$("#ns").value=""}}
 

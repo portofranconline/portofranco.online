@@ -10,6 +10,8 @@ Porto Franco Online/
 ├── shim.js               ligação das telas com o banco (login e dados)
 ├── baixar.js             downloads nas propostas
 ├── tabelas.html          tabelas como Excel + modelos do Excel completo
+├── instagram.html        análise de engajamento de perfis (últimos 30 dias)
+├── supabase/functions/instagram/index.ts   função que consulta a API oficial da Meta
 ├── publicidade/          Porto Franco Online Publicidade (só administrador)
 ├── painel/               Painel de LED (só administrador)
 ├── propostas/
@@ -42,6 +44,10 @@ Para trazer mudanças feitas no Excel para o sistema: **Tabelas › Subir Excel*
 ## Tela inicial
 - Destaque de **vencidos** e **a vencer** da Publicidade e do Painel de LED (mesma regra da aba Vencimentos).
 - Botões **Exportar Excel**, **Enviar propostas** (copiar links e WhatsApp), **Configurações** e **Baixar cópia dos dados** (arquivo .json usado para atualizar os artefatos no Claude).
+
+## Análise de Instagram
+Cola o link do perfil → mostra seguidores, engajamento médio dos últimos 30 dias, publicações por semana, gráfico por publicação e as 3 melhores. Guarda o histórico.
+Usa a API oficial da Meta (Business Discovery): só analisa perfis **Profissionais** e precisa dos segredos `IG_USER_ID` e `IG_TOKEN` na função `instagram` do Supabase.
 
 ## Acesso
 Só o **Administrador** vê e altera Publicidade, Painel de LED e Tabelas, cria logins e envia as propostas. As propostas abrem para o cliente sem login.
