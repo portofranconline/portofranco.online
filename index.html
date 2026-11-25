@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0b1f3a">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="baixar.js"></script>
 <script src="config.js"></script>
 <script src="shim.js"></script>
 <script src="excel.js"></script>
@@ -57,6 +58,10 @@ details.dv .ico{font-size:22px;width:38px;height:38px;border-radius:12px;backgro
 details.dv .tx{flex:1;font-size:12.5px;font-weight:700;line-height:1.2}details.dv .tx b{font-size:22px;margin-right:4px}details.dv .tx small{display:block;font-size:12px;opacity:.95}
 details.dv .sw{transition:transform .2s;font-size:18px}details.dv[open] .sw{transform:rotate(180deg)}
 details.dv .dl{background:#fff;border:1px solid #eef2f8;border-top:0;padding:4px 10px 8px;max-height:360px;overflow:auto;border-radius:0 0 14px 14px}
+.vr{display:flex;align-items:center;gap:8px}.cob{border:0;border-radius:10px;background:#25d366;color:#fff;font-weight:800;font-size:12px;padding:7px 9px;cursor:pointer;white-space:nowrap}
+.cbd{color:#12805c;font-style:normal;font-weight:700}
+a.card.fn{display:block;text-decoration:none;color:var(--tx)}.fe{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}.fe div{background:#f2f5fa;border-radius:12px;padding:8px 4px;text-align:center}
+.fe span{font-size:18px}.fe b{display:block;font-size:20px}.fe small{display:block;font-size:10.5px;color:var(--mu);line-height:1.1}
 </style>
 </head>
 <body>
@@ -114,6 +119,7 @@ function menu(p){
     <div class="card"><b>🔑 Trocar minha senha</b><label>Nova senha</label><input id="ns" type="password" autocomplete="new-password"><button class="btn g" id="tsn">Salvar nova senha</button></div>
     <button class="btn r" onclick="PFO.sair()">🚪 Sair</button>`;trocaSenha();return}
   $("#app").innerHTML=`<div id="dash"><div class="card mu">Carregando vencimentos…</div></div>
+  <div id="funilres"></div>
   <div class="lista">
    <a class="mod" href="publicidade/"><div class="ic">📣</div><div><b>Porto Franco Online Publicidade</b><span>Clientes de publicidade online, pagamentos e despesas</span></div><i>›</i></a>
    <a class="mod" href="painel/"><div class="ic">💡</div><div><b>Painel de LED</b><span>Clientes, pagamentos, despesas e relatórios do painel</span></div><i>›</i></a>
@@ -126,10 +132,15 @@ function menu(p){
    ${LINKS.map((l,i)=>`<div class="li"><div class="sp"><b>${l[0]}</b><br><span class="mu">${esc(linkDe(l[1]))}</span></div><button class="btn g" data-cp="${i}">Copiar link</button></div>`).join("")}
    <div class="row2"><button class="btn g" id="cpall">📋 Copiar os dois links</button><a class="btn lk" id="wa" target="_blank" rel="noopener" style="background:#25d366">💬 Enviar no WhatsApp</a></div></div>
   <div class="card" id="us"><b>👥 Logins de acesso</b><p class="mu">Carregando…</p></div>
+  <a class="mod mini" href="funil.html"><div class="ic">🎯</div><div><b>Funil de vendas</b><span>Interessados, propostas enviadas, negociação e fechamento</span></div><i>›</i></a>
   <a class="mod mini" href="tabelas.html"><div class="ic">📊</div><div><b>Tabelas (como Excel)</b><span>Editar à mão, baixar em Excel e subir de volta</span></div><i>›</i></a>
   <div class="card" id="cfg"><b>⚙️ Configurações</b>
    <label>Avisar "a vencer" com quantos dias de antecedência</label><input id="cdias" type="number" min="1" max="31">
    <label>Mensagem do WhatsApp (os links entram no final)</label><textarea id="cmsg" rows="3"></textarea>
+   <label>Chave PIX (entra nas mensagens de cobrança)</label><input id="cpix" placeholder="CNPJ, celular, e-mail ou chave aleatória">
+   <label>Cobrança — mensagem para quem está A VENCER</label><textarea id="cmav" rows="4"></textarea>
+   <label>Cobrança — mensagem para quem está VENCIDO</label><textarea id="cmve" rows="4"></textarea>
+   <p class="mu">Use: {nome} cliente · {responsavel} · {valor} · {vencimento} · {meses} meses em aberto · {pix}</p>
    <button class="btn g" id="csv">Salvar configurações</button>
    <hr style="border:0;border-top:1px solid #e6ecf4;margin:16px 0 4px">
    <b>💾 Cópia dos dados</b><p class="mu">Baixa um arquivo com todos os dados do sistema (clientes, pagamentos, despesas, propostas e cores). Use para guardar uma cópia ou para atualizar os artefatos no Claude.</p>
@@ -143,15 +154,17 @@ function menu(p){
     if(b.dataset.cp!=null)copiar(linkDe(LINKS[+b.dataset.cp][1]),"Link copiado.");
     if(b.id==="cpall")copiar(texto(),"Os dois links foram copiados.")};
   trocaSenha();usuarios(p);
-  carregarCfg().then(()=>{$("#cdias").value=CFG.dias;$("#cmsg").value=CFG.msg;atualizaWa();painelVenc()});
-  $("#csv").onclick=async()=>{CFG.dias=Math.max(1,Math.min(31,parseInt($("#cdias").value)||5));CFG.msg=$("#cmsg").value||CFG_PADRAO.msg;
+  carregarCfg().then(()=>{$("#cdias").value=CFG.dias;$("#cmsg").value=CFG.msg;$("#cpix").value=CFG.pix;$("#cmav").value=CFG.cobAv;$("#cmve").value=CFG.cobVe;atualizaWa();painelVenc();painelFunil()});
+  $("#csv").onclick=async()=>{CFG.dias=Math.max(1,Math.min(31,parseInt($("#cdias").value)||5));CFG.msg=$("#cmsg").value||CFG_PADRAO.msg;CFG.pix=$("#cpix").value.trim();CFG.cobAv=$("#cmav").value||CFG_PADRAO.cobAv;CFG.cobVe=$("#cmve").value||CFG_PADRAO.cobVe;
     try{await PFO.db.doc("config/main").set(CFG);toast("Configurações salvas.");atualizaWa();painelVenc()}catch(e){toast(msgErro(e))}};
   $("#bkp").onclick=async()=>{try{const r=await sb().from("app_docs").select("id,data,updated_at").not("id","like","modelo/%");if(r.error)throw r.error;
     const pac={sistema:"Porto Franco Online",gerado_em:new Date().toISOString(),docs:Object.fromEntries(r.data.map(x=>[x.id,x.data]))};
     const d=new Date().toISOString().slice(0,10);await PFO.downloads.save({filename:"copia-dados-porto-franco-online-"+d+".json",data:new Blob([JSON.stringify(pac,null,1)],{type:"application/json"})});toast("Cópia baixada.")}catch(e){toast(msgErro(e))}}}
 
 /* ---------- configurações ---------- */
-const CFG_PADRAO={dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:"};
+const CFG_PADRAO={dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:",pix:"",
+  cobAv:"Olá, {responsavel}! Tudo bem? 😊\nPassando para lembrar que a mensalidade da {nome} com o Porto Franco Online, no valor de {valor}, vence em {vencimento}.\nChave PIX: {pix}\nObrigado pela parceria!",
+  cobVe:"Olá, {responsavel}! Tudo bem?\nConsta em aberto a mensalidade da {nome} com o Porto Franco Online ({meses}), total de {valor}.\nChave PIX: {pix}\nSe já pagou, por favor desconsidere e me envie o comprovante. Obrigado!"};
 let CFG={...CFG_PADRAO};
 async function carregarCfg(){try{const s=await PFO.db.doc("config/main").get();if(s.exists)CFG={...CFG_PADRAO,...s.data()}}catch(e){}}
 
@@ -166,18 +179,20 @@ function analisar(d){
   const start=c=>{if(!c.ini)return null;const p=c.ini.split("-").map(Number);let s=new Date(p[0],p[1]-1,p[2]);if(c.cob==="USA PARA PAGAR")s=new Date(p[0],p[1],1);return s};
   const inWin=(c,y,m)=>{const s=start(c);return !s||s<=new Date(y,m+1,0)};
   const due=(c,y,m)=>new Date(y,m,Math.min(c.dia||1,new Date(y,m+1,0).getDate()));
-  for(const c of Object.values((d&&d.clientes)||{})){if(!ativo(c))continue;
+  for(const [id,c] of Object.entries((d&&d.clientes)||{})){if(!ativo(c))continue;
     const ab=[];for(let m=0;m<12;m++)if(pay(c,y)[m]===""&&inWin(c,y,m)&&due(c,y,m)<t)ab.push(m);
     let prox=null;for(let m=0;m<12&&!prox;m++)if(pay(c,y)[m]===""&&inWin(c,y,m))prox=due(c,y,m);if(!prox)prox=due(c,y+1,0);
     const dd=Math.round((prox-t)/864e5);
-    if(dd<0||c.status==="NEGATIVO")out.venc.push({nome:c.nome,meses:ab.map(m=>MS[m]),valor:(c.valor||0)*Math.max(ab.length,1)});
-    else if(dd<=CFG.dias)out.avenc.push({nome:c.nome,dias:dd,data:prox,valor:c.valor||0})}
+    if(dd<0||c.status==="NEGATIVO")out.venc.push({id,c,nome:c.nome,meses:ab.map(m=>MS[m]),mm:ab,valor:(c.valor||0)*Math.max(ab.length,1),data:prox});
+    else if(dd<=CFG.dias)out.avenc.push({id,c,nome:c.nome,dias:dd,data:prox,valor:c.valor||0})}
   out.venc.sort((a,b)=>b.valor-a.valor);out.avenc.sort((a,b)=>a.dias-b.dias);return out}
 async function painelVenc(){
   const box=$("#dash");if(!box)return;
   try{
     const mods=[["Porto Franco Online Publicidade","📣","online/main","publicidade/"],["Painel de LED","💡","painel/main","painel/"]];
     const res=[];for(const m of mods){const s=await PFO.db.doc(m[2]).get();res.push({m,a:analisar(s.exists?s.data():{})})}
+    try{const l=await PFO.db.doc("cobrancas/main").get();COBLOG=l.exists?l.data():{}}catch(e){COBLOG={}}
+    RES=res;
     const tot=k=>res.reduce((s,r)=>s+r.a[k].reduce((x,y)=>x+y.valor,0),0);
     const max=Math.max(1,...res.flatMap(r=>[r.a.venc.reduce((x,y)=>x+y.valor,0),r.a.avenc.reduce((x,y)=>x+y.valor,0)]));
     const barra=(v,cor)=>`<div class="bt"><i style="width:${Math.max(2,v/max*100)}%;background:${cor}"></i><span>${brl(v)}</span></div>`;
@@ -189,11 +204,42 @@ async function painelVenc(){
      ${res.map(r=>{const tv=r.a.venc.reduce((x,y)=>x+y.valor,0),ta=r.a.avenc.reduce((x,y)=>x+y.valor,0);return `<div class="card vc"><div class="vh"><b>${r.m[1]} ${r.m[0]}</b><a href="${r.m[3]}">abrir ›</a></div>
        <div class="ab">
         <details class="dv ve"><summary><span class="ico">🔴</span><span class="tx"><b>${r.a.venc.length}</b> vencidos<small>${brl(tv)}</small></span><span class="sw">▾</span></summary>
-         <div class="dl">${r.a.venc.length?r.a.venc.map(x=>`<div class="vl"><span>${esc(x.nome)}<small>${x.meses.length?x.meses.join(", "):"negativado"}</small></span><b>${brl(x.valor)}</b></div>`).join(""):'<p class="mu">Nenhum vencido 🎉</p>'}</div></details>
+         <div class="dl">${r.a.venc.length?r.a.venc.map(x=>linhaCob(r,x,"ve",x.meses.length?x.meses.join(", "):"negativado")).join(""):'<p class="mu">Nenhum vencido 🎉</p>'}</div></details>
         <details class="dv av"><summary><span class="ico">🟠</span><span class="tx"><b>${r.a.avenc.length}</b> a vencer<small>${brl(ta)}</small></span><span class="sw">▾</span></summary>
-         <div class="dl">${r.a.avenc.length?r.a.avenc.map(x=>`<div class="vl"><span>${esc(x.nome)}<small>${x.dias===0?"vence hoje":"em "+x.dias+(x.dias===1?" dia":" dias")} · ${x.data.toLocaleDateString("pt-BR")}</small></span><b>${brl(x.valor)}</b></div>`).join(""):'<p class="mu">Nada vencendo nos próximos dias.</p>'}</div></details>
+         <div class="dl">${r.a.avenc.length?r.a.avenc.map(x=>linhaCob(r,x,"av",(x.dias===0?"vence hoje":"em "+x.dias+(x.dias===1?" dia":" dias"))+" · "+x.data.toLocaleDateString("pt-BR"))).join(""):'<p class="mu">Nada vencendo nos próximos dias.</p>'}</div></details>
        </div></div>`}).join("")}`}
   catch(e){box.innerHTML='<div class="card err">Não consegui carregar os vencimentos: '+esc(msgErro(e))+'</div>'}}
+
+/* ---------- cobrança pelo WhatsApp ---------- */
+let COBLOG={},RES=[];
+const chaveCob=(r,x,tipo)=>r.m[2].split("/")[0]+":"+x.id+":"+tipo+":"+x.data.toISOString().slice(0,7);
+function linhaCob(r,x,tipo,info){const k=chaveCob(r,x,tipo),qd=COBLOG[k];
+  return `<div class="vl"><span>${esc(x.nome)}<small>${esc(info)}${qd?` · <em class="cbd">✔ cobrado ${new Date(qd).toLocaleDateString("pt-BR")}</em>`:""}</small></span>
+   <span class="vr"><b>${brl(x.valor)}</b><button class="cob" data-mod="${r.m[2]}" data-id="${esc(x.id)}" data-t="${tipo}" title="Cobrar pelo WhatsApp">💬 Cobrar</button></span></div>`}
+function telefone(t){let d=String(t||"").replace(/\D/g,"");if(!d)return"";if(d.length<=11)d="55"+d.replace(/^0+/,"");return d.length>=12?d:""}
+function mensagemCob(x,tipo){const c=x.c||{};const tpl=tipo==="ve"?CFG.cobVe:CFG.cobAv;
+  return tpl.replace(/\{nome\}/g,c.nome||"").replace(/\{responsavel\}/g,(c.resp||"").trim()||"tudo bem").replace(/\{valor\}/g,brl(x.valor))
+   .replace(/\{vencimento\}/g,x.data.toLocaleDateString("pt-BR")).replace(/\{meses\}/g,(x.meses&&x.meses.length?x.meses.join(", "):"em aberto")).replace(/\{pix\}/g,CFG.pix||"(peça a chave PIX)")
+   .replace(/Olá, tudo bem! Tudo bem\?/,"Olá! Tudo bem?")}
+document.addEventListener("click",async ev=>{const b=ev.target.closest("button.cob");if(!b)return;ev.preventDefault();
+  const r=RES.find(z=>z.m[2]===b.dataset.mod);if(!r)return;const lista=b.dataset.t==="ve"?r.a.venc:r.a.avenc,x=lista.find(z=>String(z.id)===b.dataset.id);if(!x)return;
+  let fone=telefone(x.c.tel),novo=false;
+  if(!fone){const t=prompt("Sem telefone cadastrado para "+x.nome+".\nDigite o WhatsApp com DDD (ex.: 99 98111-2222):");if(!t)return;fone=telefone(t);if(!fone)return toast("Número inválido.");novo=t}
+  window.open("https://api.whatsapp.com/send?phone="+fone+"&text="+encodeURIComponent(mensagemCob(x,b.dataset.t)),"_blank");
+  const k=chaveCob(r,x,b.dataset.t);COBLOG[k]=new Date().toISOString();
+  try{await PFO.db.doc("cobrancas/main").set(COBLOG);
+    if(novo){const s=await PFO.db.doc(b.dataset.mod).get(),d=s.data(),cl=d.clientes||{};if(cl[x.id]){cl[x.id].tel=novo;await PFO.db.doc(b.dataset.mod).update({clientes:cl});toast("Telefone salvo no cadastro.")}}}catch(e){toast(msgErro(e))}
+  painelVenc()});
+
+/* ---------- funil (resumo na tela inicial) ---------- */
+const ETAPAS=[["contato","Contato","📞"],["proposta","Proposta enviada","📤"],["negociando","Negociando","🤝"],["fechado","Fechado","✅"],["perdido","Perdido","✖️"]];
+async function painelFunil(){const box=$("#funilres");if(!box)return;
+  try{const s=await PFO.db.doc("funil/main").get(),it=(s.exists&&s.data().itens)||[];
+    const n=e=>it.filter(x=>x.etapa===e).length,neg=it.filter(x=>x.etapa==="proposta"||x.etapa==="negociando").reduce((a,x)=>a+(+x.valor||0),0);
+    const hoje=new Date().toISOString().slice(0,10),atras=it.filter(x=>x.data&&x.data<=hoje&&!["fechado","perdido"].includes(x.etapa)).length;
+    box.innerHTML=`<a class="card fn" href="funil.html"><div class="vh"><b>🎯 Funil de vendas</b><span class="mu">abrir ›</span></div>
+     <div class="fe">${ETAPAS.map(e=>`<div><span>${e[2]}</span><b>${n(e[0])}</b><small>${e[1]}</small></div>`).join("")}</div>
+     <div class="mu">💰 Em negociação: <b>${brl(neg)}</b>${atras?` · ⏰ <b style="color:#b3261e">${atras} retorno${atras>1?"s":""} para hoje</b>`:""}</div></a>`}catch(e){box.innerHTML=""}}
 function trocaSenha(){$("#tsn").onclick=async()=>{const v=$("#ns").value;if(v.length<6)return toast("Use pelo menos 6 caracteres.");const r=await sb().auth.updateUser({password:v});toast(r.error?msgErro(r.error):"Senha alterada.");$("#ns").value=""}}
 
 async function usuarios(eu){

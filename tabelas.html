@@ -9,6 +9,7 @@
 <script>window.PFO_PROTEGIDA=true</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="baixar.js"></script>
 <script src="config.js"></script>
 <script src="shim.js"></script>
 <style>
@@ -122,7 +123,7 @@ function planilhas(){const d=S.d,cl=d.clientes||{},wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([DES.map(c=>c[1]),...(d.despesas||[]).map(x=>DES.map(([k])=>x[k]??""))]),"Despesas");
   return wb}
 $("#xls").onclick=()=>{if(!S.d)return;const nome=$("#mod").value==="painel/main"?"PAINEL DE LED":"PORTO FRANCO ONLINE PUBLICIDADE";
-  XLSX.writeFile(planilhas(),nome+" - tabela "+new Date().toISOString().slice(0,10)+".xlsx");toast("Planilha baixada.")};
+  PFO_SALVAR(new Blob([XLSX.write(planilhas(),{bookType:"xlsx",type:"array"})]),nome+" - tabela "+new Date().toISOString().slice(0,10)+".xlsx");toast("Planilha baixada.")};
 $("#up").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
   try{const wb=XLSX.read(await f.arrayBuffer());const novo=JSON.parse(JSON.stringify(S.d));novo.clientes=novo.clientes||{};let nc=0,np=0,nd=null;
     const sh=n=>wb.Sheets[n]?XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""}):null;

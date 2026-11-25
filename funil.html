@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Funil de vendas · Porto Franco Online</title>
+<link rel="icon" href="logo.png">
+<script>window.PFO_PROTEGIDA=true</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="baixar.js"></script>
+<script src="config.js"></script>
+<script src="shim.js"></script>
+<style>
+:root{--bg:#f2f5fa;--tx:#0b1f3a;--mu:#5b6b7f;--cy:#0b7285;--rd:#c62828;--ok:#12805c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:80px}
+header{background:linear-gradient(120deg,#0b1f3a,#0b7285 70%,#12a37a);color:#fff;padding:18px 16px;border-radius:0 0 22px 22px}
+header h1{font-size:19px;margin:0}header small{color:#cfe9f0}
+main{max-width:980px;margin:auto;padding:12px}
+.card{background:#fff;border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 1px 3px rgba(11,31,58,.08)}
+.res{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}@media(min-width:640px){.res{grid-template-columns:repeat(4,1fr)}}
+.res div{background:#fff;border-radius:14px;padding:12px;box-shadow:0 1px 3px rgba(11,31,58,.08)}.res span{font-size:11.5px;font-weight:800;color:var(--mu);text-transform:uppercase}.res b{display:block;font-size:21px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 0;position:sticky;top:0;background:var(--bg);z-index:2}
+.tabs button{flex:0 0 auto;border:1px solid #cfd9e6;background:#fff;border-radius:999px;padding:8px 12px;font:inherit;font-weight:800;font-size:13px;color:var(--tx);cursor:pointer}
+.tabs button.on{background:var(--tx);color:#fff;border-color:var(--tx)}.tabs button i{font-style:normal;opacity:.7;margin-left:4px}
+.it{border-left:5px solid var(--cy)}.it.proposta{border-color:#5161d6}.it.negociando{border-color:#ef8f00}.it.fechado{border-color:var(--ok)}.it.perdido{border-color:#9aa5b1;opacity:.8}
+.it h3{margin:0;font-size:16px}.it .mu{color:var(--mu);font-size:13px}.tag{display:inline-block;font-size:11px;font-weight:800;border-radius:6px;padding:3px 8px;background:#e7edf6;color:var(--mu);margin-right:4px}
+.tag.at{background:#fde0e0;color:#b3261e}.tag.ok{background:#dcf5ea;color:var(--ok)}
+.ac{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.ac button,.ac a{border:0;border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;font-weight:800;background:#e7edf6;color:var(--tx);cursor:pointer;text-decoration:none}
+.ac .wa{background:#25d366;color:#fff}.ac .pr{background:#5161d6;color:#fff}.ac .cl{background:var(--ok);color:#fff}.ac .rm{background:#fde0e0;color:var(--rd)}
+.btn{border:0;border-radius:12px;padding:13px 14px;background:var(--cy);color:#fff;font:inherit;font-weight:800;width:100%;cursor:pointer}
+.btn.g{background:#e7edf6;color:var(--tx)}
+#novo{position:fixed;right:14px;bottom:14px;width:auto;z-index:5;border-radius:999px;padding:14px 18px;box-shadow:0 8px 20px rgba(11,31,58,.3)}
+#sheet{position:fixed;inset:0;background:rgba(11,31,58,.55);display:none;align-items:center;z-index:9;padding:10px}#sheet.on{display:flex}
+#sh{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:560px;margin:auto;max-height:92vh;overflow:auto}
+label{display:block;font-size:12px;color:var(--mu);margin:10px 0 4px;font-weight:700}
+input,select,textarea{width:100%;padding:11px;border-radius:10px;border:1px solid #c9d6e6;font:inherit;background:#fff;color:var(--tx)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.vazio{text-align:center;color:var(--mu);padding:30px 10px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:80px;background:#0b1f3a;color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;display:none;z-index:10;max-width:90vw}
+</style>
+</head>
+<body>
+<header><h1>🎯 Funil de vendas</h1><small>Do primeiro contato ao cliente fechado</small></header>
+<main>
+<div class="res" id="res"></div>
+<div class="tabs" id="tabs"></div>
+<div id="lista"><div class="card vazio">Carregando…</div></div>
+</main>
+<button class="btn" id="novo">＋ Novo interessado</button>
+<div id="sheet"><div id="sh"></div></div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const brl=v=>"R$ "+(Math.round((+v||0)*100)/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const dbr=d=>d?d.split("-").reverse().join("/"):"";
+const hoje=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+function toast(m){const t=$("#toast");t.textContent=m;t.style.display="block";clearTimeout(t._t);t._t=setTimeout(()=>t.style.display="none",3200)}
+const ETAPAS=[["contato","Contato","📞"],["proposta","Proposta enviada","📤"],["negociando","Negociando","🤝"],["fechado","Fechado","✅"],["perdido","Perdido","✖️"]];
+const PROD={online:"Publicidade online",painel:"Painel de LED",ambos:"Publicidade + Painel"};
+const LINK={online:"propostas/online/",painel:"propostas/painel/"};
+let S={db:null,itens:[],aba:"contato",cfg:{}};
+
+function telefone(t){let d=String(t||"").replace(/\D/g,"");if(!d)return"";if(d.length<=11)d="55"+d.replace(/^0+/,"");return d.length>=12?d:""}
+async function salvar(msg){try{await S.db.doc("funil/main").set({itens:S.itens});if(msg)toast(msg)}catch(e){toast("Não foi possível salvar: "+(e.message||e))}}
+
+function render(){
+  const it=S.itens,n=e=>it.filter(x=>x.etapa===e).length,soma=f=>it.filter(f).reduce((a,x)=>a+(+x.valor||0),0);
+  const fech=n("fechado"),tot=fech+n("perdido");
+  $("#res").innerHTML=`<div><span>Em negociação</span><b>${brl(soma(x=>x.etapa==="proposta"||x.etapa==="negociando"))}</b></div>
+   <div><span>Fechados</span><b>${brl(soma(x=>x.etapa==="fechado"))}</b><small class="mu">${fech} cliente${fech===1?"":"s"}</small></div>
+   <div><span>Taxa de fechamento</span><b>${tot?Math.round(fech/tot*100)+"%":"—"}</b></div>
+   <div><span>Retornos para hoje</span><b>${it.filter(x=>x.data&&x.data<=hoje()&&!["fechado","perdido"].includes(x.etapa)).length}</b></div>`;
+  $("#tabs").innerHTML=ETAPAS.map(e=>`<button data-aba="${e[0]}" class="${S.aba===e[0]?"on":""}">${e[2]} ${e[1]}<i>${n(e[0])}</i></button>`).join("");
+  const l=it.filter(x=>x.etapa===S.aba).sort((a,b)=>(a.data||"9999").localeCompare(b.data||"9999"));
+  const idx=ETAPAS.findIndex(e=>e[0]===S.aba);
+  $("#lista").innerHTML=l.length?l.map(x=>{const atras=x.data&&x.data<=hoje()&&!["fechado","perdido"].includes(x.etapa);
+    return `<div class="card it ${x.etapa}"><h3>${esc(x.empresa)}</h3>
+     <div class="mu">${esc(x.contato||"")}${x.tel?" · "+esc(x.tel):""}${x.ig?" · "+esc(x.ig):""}</div>
+     <div style="margin-top:6px"><span class="tag">${PROD[x.produto]||"—"}</span>${x.valor?`<span class="tag">${brl(x.valor)}/mês</span>`:""}${x.data?`<span class="tag ${atras?"at":""}">${atras?"⏰ ":"📅 "}${esc(x.passo||"Retorno")} · ${dbr(x.data)}</span>`:""}${x.cliente?`<span class="tag ok">✔ cliente cadastrado</span>`:""}</div>
+     ${x.obs?`<div class="mu" style="margin-top:6px">${esc(x.obs)}</div>`:""}
+     <div class="ac">
+      ${idx>0?`<button data-mv="${x.k}" data-d="-1">◀ ${ETAPAS[idx-1][1]}</button>`:""}${idx<3?`<button data-mv="${x.k}" data-d="1">${ETAPAS[idx+1][1]} ▶</button>`:""}
+      ${x.etapa!=="perdido"&&x.etapa!=="fechado"?`<button data-perd="${x.k}">✖ Perdido</button>`:""}
+      <button class="wa" data-wa="${x.k}">💬 WhatsApp</button>
+      <button class="pr" data-pr="${x.k}">📤 Enviar proposta</button>
+      ${x.etapa==="fechado"&&!x.cliente?`<button class="cl" data-cli="${x.k}">➕ Cadastrar como cliente</button>`:""}
+      <button data-ed="${x.k}">✎ Editar</button><button class="rm" data-rm="${x.k}">🗑</button></div></div>`}).join("")
+    :`<div class="card vazio">Nenhum interessado em <b>${ETAPAS[idx][1]}</b>.${S.aba==="contato"?"<br>Toque em ＋ Novo interessado para começar.":""}</div>`}
+
+function form(x){x=x||{etapa:S.aba==="perdido"?"contato":S.aba,produto:"online"};
+  $("#sh").innerHTML=`<b>${x.k?"Editar interessado":"Novo interessado"}</b>
+   <label>Empresa</label><input id="fe" value="${esc(x.empresa||"")}">
+   <div class="g2"><div><label>Contato (nome)</label><input id="fc" value="${esc(x.contato||"")}"></div><div><label>WhatsApp</label><input id="ft" inputmode="tel" value="${esc(x.tel||"")}" placeholder="99 98111-2222"></div></div>
+   <div class="g2"><div><label>Instagram</label><input id="fi" value="${esc(x.ig||"")}" placeholder="@empresa"></div><div><label>Interesse</label><select id="fp">${Object.keys(PROD).map(k=>`<option value="${k}" ${x.produto===k?"selected":""}>${PROD[k]}</option>`).join("")}</select></div></div>
+   <div class="g2"><div><label>Valor mensal (R$)</label><input id="fv" inputmode="decimal" value="${esc(x.valor||"")}"></div><div><label>Etapa</label><select id="fs">${ETAPAS.map(e=>`<option value="${e[0]}" ${x.etapa===e[0]?"selected":""}>${e[1]}</option>`).join("")}</select></div></div>
+   <div class="g2"><div><label>Próximo passo</label><input id="fn" value="${esc(x.passo||"")}" placeholder="Ligar, enviar proposta…"></div><div><label>Data do retorno</label><input id="fd" type="date" value="${esc(x.data||"")}"></div></div>
+   <label>Observações</label><textarea id="fo" rows="3">${esc(x.obs||"")}</textarea>
+   <div class="g2" style="margin-top:12px"><button class="btn g" id="fx">Cancelar</button><button class="btn" id="fok">Salvar</button></div>`;
+  $("#sheet").classList.add("on");
+  $("#fx").onclick=()=>$("#sheet").classList.remove("on");
+  $("#fok").onclick=async()=>{const e=$("#fe").value.trim();if(!e)return toast("Digite o nome da empresa.");
+    const o=Object.assign(x,{empresa:e,contato:$("#fc").value.trim(),tel:$("#ft").value.trim(),ig:$("#fi").value.trim(),produto:$("#fp").value,
+      valor:parseFloat(String($("#fv").value).replace(/\./g,"").replace(",","."))||0,etapa:$("#fs").value,passo:$("#fn").value.trim(),data:$("#fd").value,obs:$("#fo").value.trim(),atualizado:new Date().toISOString()});
+    if(!o.k){o.k=Date.now();o.criado=new Date().toISOString();S.itens.push(o)}
+    S.aba=o.etapa;$("#sheet").classList.remove("on");render();await salvar("Salvo.")}}
+
+function abrirWa(x,texto){let f=telefone(x.tel);
+  if(!f){const t=prompt("WhatsApp de "+x.empresa+" (com DDD):");if(!t)return false;f=telefone(t);if(!f){toast("Número inválido.");return false}x.tel=t}
+  window.open("https://api.whatsapp.com/send?phone="+f+"&text="+encodeURIComponent(texto),"_blank");return true}
+
+async function cadastrar(x){
+  const mods=x.produto==="ambos"?["online","painel"]:[x.produto];
+  for(const mod of mods){const ref=S.db.doc(mod+"/main"),s=await ref.get(),d=s.exists?s.data():{clientes:{}},cl=d.clientes||{};
+    const id=String(Math.max(0,...Object.keys(cl).map(Number).filter(n=>isFinite(n)))+1),hj=hoje();
+    cl[id]={nome:x.empresa.toUpperCase(),resp:x.contato||"",tel:x.tel||"",ig:x.ig||"",valor:+x.valor||0,dia:+hj.slice(8,10),ini:hj,status:"ATIVO",
+      cob:"PAGA PARA USAR",plano:mod==="online"?"MENSAL":"",obs:x.obs||"",p:{}};
+    await ref.update({clientes:cl})}
+  x.cliente=mods.join("+");await salvar("Cliente cadastrado em "+mods.map(m=>m==="online"?"Publicidade":"Painel de LED").join(" e ")+".");render()}
+
+document.addEventListener("click",async ev=>{const b=ev.target.closest("button");if(!b)return;
+  if(b.dataset.aba){S.aba=b.dataset.aba;return render()}
+  if(b.id==="novo")return form();
+  const k=+(b.dataset.mv||b.dataset.perd||b.dataset.wa||b.dataset.pr||b.dataset.cli||b.dataset.ed||b.dataset.rm||0);if(!k)return;
+  const x=S.itens.find(z=>z.k===k);if(!x)return;
+  if(b.dataset.mv){const i=ETAPAS.findIndex(e=>e[0]===x.etapa)+(+b.dataset.d);x.etapa=ETAPAS[i][0];x.atualizado=new Date().toISOString();S.aba=x.etapa;render();return salvar("Movido para "+ETAPAS[i][1]+".")}
+  if(b.dataset.perd){x.etapa="perdido";render();return salvar("Marcado como perdido.")}
+  if(b.dataset.wa){if(abrirWa(x,"Olá"+(x.contato?", "+x.contato.split(" ")[0]:"")+"! Aqui é do Porto Franco Online. "))salvar();return}
+  if(b.dataset.pr){const prods=x.produto==="ambos"?["online","painel"]:[x.produto];
+    const txt=(S.cfg.msg||"Olá! Seguem as propostas do Porto Franco Online:")+"\n\n"+prods.map(p=>"• "+(p==="online"?"Proposta Porto Franco Online":"Proposta Painel de LED")+": "+new URL(LINK[p],PFO.base).href).join("\n");
+    if(abrirWa(x,txt)){if(x.etapa==="contato"){x.etapa="proposta";S.aba="proposta"}x.passo=x.passo||"Retorno da proposta";
+      if(!x.data){const d=new Date();d.setDate(d.getDate()+3);x.data=d.toISOString().slice(0,10)}render();salvar("Proposta enviada. Retorno marcado para "+dbr(x.data)+".")}return}
+  if(b.dataset.cli){if(confirm("Cadastrar "+x.empresa+" como cliente ("+PROD[x.produto]+")?"))cadastrar(x).catch(e=>toast(e.message||e));return}
+  if(b.dataset.ed)return form(x);
+  if(b.dataset.rm){if(!confirm("Apagar "+x.empresa+" do funil?"))return;S.itens=S.itens.filter(z=>z.k!==k);render();return salvar("Apagado.")}});
+
+(async()=>{S.db=await window.claude.use("db");if(!S.db){$("#lista").innerHTML='<div class="card vazio">Entre como administrador.</div>';return}
+  try{const c=await S.db.doc("config/main").get();if(c.exists)S.cfg=c.data()}catch(e){}
+  S.db.doc("funil/main").onSnapshot(s=>{S.itens=(s.exists&&s.data().itens)||[];render()},()=>{$("#lista").innerHTML='<div class="card vazio">Sem acesso aos dados.</div>'})})();
+</script>
+</body>
+</html>

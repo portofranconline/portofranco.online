@@ -8,8 +8,9 @@ Porto Franco Online/
 ├── index.html            entrada, login e menu
 ├── config.js             endereço e chave publicável do Supabase
 ├── shim.js               ligação das telas com o banco (login e dados)
-├── baixar.js             downloads nas propostas
+├── baixar.js             downloads (Mac/PC baixa direto; iPhone abre "Salvar em Arquivos")
 ├── tabelas.html          tabelas como Excel (editar, baixar e subir)
+├── funil.html            funil de vendas (contato → proposta → negociação → fechado)
 ├── excel.js              gera o Excel no formato ORIGINAL com os dados do sistema
 ├── modelos/              planilhas originais criptografadas (painel.bin, online.bin)
 ├── publicidade/          Porto Franco Online Publicidade (só administrador)
@@ -43,6 +44,8 @@ Porto Franco Online/
 Para trazer mudanças feitas no Excel para o sistema: **Tabelas › Subir Excel** (usa a planilha baixada em Tabelas).
 
 ## Tela inicial
+- **💬 Cobrar** em cada cliente vencido ou a vencer: abre o WhatsApp do cliente com a mensagem pronta (valor, vencimento e chave PIX) e marca "cobrado em". Textos e PIX em Configurações.
+- Resumo do **Funil de vendas**.
 - Destaque de **vencidos** e **a vencer** da Publicidade e do Painel de LED (mesma regra da aba Vencimentos).
 - Botões **Exportar Excel**, **Enviar propostas** (copiar links e WhatsApp), **Configurações** e **Baixar cópia dos dados** (arquivo .json usado para atualizar os artefatos no Claude).
 

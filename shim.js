@@ -130,13 +130,11 @@
   /* ---------- downloads ---------- */
   var downloads = {
     save: async function (o) {
-      var data = o.data;
-      var blob = data instanceof Blob ? data : new Blob([data], { type: o.type || "application/octet-stream" });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement("a");
-      a.href = url; a.download = o.filename || "arquivo";
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      if (window.PFO_SALVAR) { await window.PFO_SALVAR(o.data, o.filename || "arquivo"); return true; }
+      var blob = o.data instanceof Blob ? o.data : new Blob([o.data]);
+      var url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = o.filename || "arquivo"; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 15000);
       return true;
     }
   };

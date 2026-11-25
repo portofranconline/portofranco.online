@@ -170,9 +170,7 @@
     try {
       if (btn) { btn.disabled = true; btn.textContent = "Gerando planilha…"; }
       var blob = await gerar(mod);
-      var u = URL.createObjectURL(blob), a = document.createElement("a");
-      a.href = u; a.download = CFG[mod].nome; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(u); }, 8000);
+      await window.PFO_SALVAR(blob, CFG[mod].nome);
       return true;
     } catch (e) { alert("Não foi possível gerar o Excel: " + ((e && e.message) || e)); return false; }
     finally { if (btn) { btn.disabled = false; btn.textContent = t0; } }
