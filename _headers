@@ -1,0 +1,10 @@
+/*
+  X-Robots-Tag: noindex, nofollow
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: same-origin
+
+/*.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Tabelas · Porto Franco Online</title>
+<link rel="icon" href="logo.png">
+<script>window.PFO_PROTEGIDA=true</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<script src="shim.js"></script>
+<style>
+:root{--bg:#f2f5fa;--tx:#0b1f3a;--mu:#5b6b7f;--cy:#0b7285;--rd:#c62828;--ok:#12805c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding-bottom:70px}
+header{background:linear-gradient(120deg,#0b1f3a,#0b7285 70%,#12a37a);color:#fff;padding:16px;border-radius:0 0 20px 20px}
+header h1{font-size:18px;margin:0}header small{color:#cfe9f0}
+main{padding:10px 12px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+select,button,input{font:inherit}select{padding:9px;border-radius:10px;border:1px solid #c9d6e6;background:#fff;color:var(--tx)}
+.btn{border:0;border-radius:10px;padding:10px 13px;background:var(--cy);color:#fff;font-weight:800;cursor:pointer}
+.btn.g{background:#e7edf6;color:var(--tx)}.btn.ok{background:var(--ok)}.btn.r{background:#fde0e0;color:var(--rd)}
+.btn:disabled{opacity:.5}
+.wrap{overflow:auto;background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(11,31,58,.08);max-height:calc(100vh - 230px)}
+table{border-collapse:separate;border-spacing:0;min-width:100%}
+th,td{border-bottom:1px solid #e6ecf4;border-right:1px solid #eef2f8;padding:0;white-space:nowrap}
+th{position:sticky;top:0;background:#0b1f3a;color:#fff;font-size:12px;padding:8px 6px;z-index:1;text-align:left}
+td input{border:0;padding:8px 6px;width:100%;min-width:70px;background:transparent;color:var(--tx)}
+td input:focus{outline:2px solid var(--cy);background:#eef9fb}
+td.id{color:var(--mu);font-size:12px;padding:0 6px;background:#f7f9fc}
+td.nm{position:sticky;left:0;z-index:1;color:var(--tx);font-weight:700;max-width:170px;overflow:hidden;text-overflow:ellipsis}
+td input.ch{background:#fff7d6}
+td.x button{border:0;background:none;color:var(--rd);font-size:16px;cursor:pointer;padding:0 8px}
+.mu{color:var(--mu);font-size:12.5px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:64px;background:#0b1f3a;color:#fff;padding:10px 16px;border-radius:10px;font-weight:700;display:none;z-index:9;max-width:90vw}
+body.ro .ed{display:none!important}
+</style>
+</head>
+<body>
+<header><h1>📊 Tabelas (como Excel)</h1><small>Edite à mão, baixe em Excel e suba de volta</small></header>
+<main>
+<div class="bar">
+ <select id="mod"><option value="painel/main">Painel de LED</option><option value="online/main">Porto Franco Online Publicidade</option></select>
+ <select id="tab"><option value="pag">Pagamentos do ano</option><option value="cli">Clientes (cadastro)</option><option value="des">Despesas</option></select>
+ <select id="ano"></select>
+</div>
+<div class="bar">
+ <button class="btn ok ed" id="salvar" disabled>💾 Salvar alterações</button>
+ <button class="btn g ed" id="nova">＋ Nova linha</button>
+ <button class="btn g" id="xls">⬇ Baixar Excel</button>
+ <label class="btn g ed" style="cursor:pointer">⬆ Subir Excel<input type="file" id="up" accept=".xlsx,.xls" hidden></label>
+</div>
+<p class="mu" id="info"></p>
+<div class="wrap"><table id="t"></table></div>
+<div class="ed" style="background:#fff;border-radius:14px;padding:12px;margin-top:14px;box-shadow:0 1px 3px rgba(11,31,58,.08)"><b>📎 Modelos do Excel completo</b>
+<p class="mu">O botão "Baixar Excel" do Painel e da Publicidade usa a sua planilha original como modelo. Envie aqui o arquivo .xlsx de cada um (fica guardado só no banco, protegido pelo login).</p>
+<div class="bar"><label class="btn g" style="cursor:pointer">⬆ Modelo do Painel de LED<input type="file" id="mpainel" accept=".xlsx" hidden></label>
+<label class="btn g" style="cursor:pointer">⬆ Modelo da Publicidade<input type="file" id="monline" accept=".xlsx" hidden></label></div><p class="mu" id="mst"></p></div>
+</main>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+const CLI=[["nome","Nome"],["status","Status"],["plano","Plano"],["valor","Valor"],["dia","Dia venc."],["ini","Início (AAAA-MM-DD)"],["cob","Cobrança"],["ig","Instagram"],["tel","Telefone"],["resp","Responsável"],["obs","Observação"]];
+const DES=[["ano","Ano"],["mes","Mês (1-12)"],["cat","Categoria"],["desc","Descrição"],["valor","Valor"],["ent","Entrada (AAAA-MM-DD)"],["pago","Pago em (AAAA-MM-DD)"]];
+const NUM=new Set(["valor","dia","ano","mes"]);
+let S={db:null,ro:true,d:null,unsub:null,dirty:false};
+function toast(m){const t=$("#toast");t.textContent=m;t.style.display="block";clearTimeout(t._t);t._t=setTimeout(()=>t.style.display="none",3500)}
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function num(v){if(v===""||v==null)return"";if(typeof v==="number")return v;const s=String(v).trim();
+  const t=s.replace(/^R\$\s*/,"").replace(/\.(?=\d{3}(\D|$))/g,"").replace(",",".");return /^-?\d+(\.\d+)?$/.test(t)?parseFloat(t):s}
+function anos(){const y=new Date().getFullYear(),set=new Set([y-1,y,y+1]);
+  if(S.d)Object.values(S.d.clientes||{}).forEach(c=>Object.keys(c.p||{}).forEach(a=>set.add(+a)));return[...set].sort()}
+function preencherAnos(){const cur=$("#ano").value||String(new Date().getFullYear());$("#ano").innerHTML=anos().map(a=>`<option ${String(a)===cur?"selected":""}>${a}</option>`).join("")}
+function ordem(o){return Object.keys(o).sort((a,b)=>(+a)-(+b))}
+
+function render(){
+  if(!S.d){$("#t").innerHTML="";$("#info").textContent="Carregando…";return}
+  const tab=$("#tab").value,ano=$("#ano").value;$("#ano").style.display=tab==="pag"?"":"none";
+  const cl=S.d.clientes||{},ro=S.ro?"readonly":"";let h="";
+  if(tab==="pag"){
+    h="<tr><th>Nº</th><th>Cliente</th><th>Status</th>"+MESES.map(m=>`<th>${m}/${ano}</th>`).join("")+"</tr>";
+    for(const id of ordem(cl)){const c=cl[id],p=(c.p&&c.p[ano])||Array(12).fill("");
+      h+=`<tr><td class="id">${esc(id)}</td><td class="id nm">${esc(c.nome)}</td><td class="id">${esc(c.status||"")}</td>`+
+        MESES.map((m,i)=>`<td><input ${ro} data-id="${esc(id)}" data-m="${i}" value="${esc(p[i]??"")}"></td>`).join("")+"</tr>"}
+    $("#info").textContent="Digite o valor pago no mês, ou um texto: ABONADO, PERMUTA, PAGO… Deixe vazio se não pagou.";
+  }else if(tab==="cli"){
+    h="<tr><th>Nº</th>"+CLI.map(c=>`<th>${c[1]}</th>`).join("")+"<th class='ed'></th></tr>";
+    for(const id of ordem(cl)){const c=cl[id];
+      h+=`<tr><td class="id">${esc(id)}</td>`+CLI.map(([k])=>`<td><input ${ro} data-id="${esc(id)}" data-k="${k}" value="${esc(c[k]??"")}"></td>`).join("")+`<td class="x ed"><button data-del="${esc(id)}" title="Apagar cliente">✕</button></td></tr>`}
+    $("#info").textContent="Status: ATIVO, ENCERRADO ou PERMUTA. Cobrança: PAGA PARA USAR ou USA PARA PAGAR.";
+  }else{
+    const ds=S.d.despesas||[];
+    h="<tr><th>Nº</th>"+DES.map(c=>`<th>${c[1]}</th>`).join("")+"<th class='ed'></th></tr>";
+    ds.forEach((d,i)=>{h+=`<tr><td class="id">${i+1}</td>`+DES.map(([k])=>`<td><input ${ro} data-i="${i}" data-k="${k}" value="${esc(d[k]??"")}"></td>`).join("")+`<td class="x ed"><button data-deli="${i}" title="Apagar despesa">✕</button></td></tr>`});
+    $("#info").textContent=ds.length+" despesas.";
+  }
+  $("#t").innerHTML=h;marcar(false)}
+function marcar(v){S.dirty=v;$("#salvar").disabled=!v}
+
+$("#t").addEventListener("input",e=>{const i=e.target;if(i.tagName!=="INPUT")return;i.classList.add("ch");
+  const tab=$("#tab").value,ano=$("#ano").value,c=S.d.clientes;
+  if(tab==="pag"){const cc=c[i.dataset.id];cc.p=cc.p||{};cc.p[ano]=cc.p[ano]||Array(12).fill("");cc.p[ano][+i.dataset.m]=num(i.value)}
+  else if(tab==="cli"){const k=i.dataset.k;c[i.dataset.id][k]=NUM.has(k)?num(i.value):i.value}
+  else{const k=i.dataset.k;S.d.despesas[+i.dataset.i][k]=NUM.has(k)?num(i.value):i.value}
+  marcar(true)});
+$("#t").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.del){if(!confirm("Apagar o cliente "+(S.d.clientes[b.dataset.del].nome||"")+"? Só vale depois de Salvar."))return;delete S.d.clientes[b.dataset.del];render();marcar(true)}
+  if(b.dataset.deli!=null){if(!confirm("Apagar esta despesa? Só vale depois de Salvar."))return;S.d.despesas.splice(+b.dataset.deli,1);render();marcar(true)}});
+$("#nova").onclick=()=>{const tab=$("#tab").value;
+  if(tab==="des"){const n=new Date();S.d.despesas=S.d.despesas||[];S.d.despesas.push({ano:n.getFullYear(),mes:n.getMonth()+1,cat:"OUTROS",desc:"",valor:"",k:Date.now()})}
+  else{const ids=Object.keys(S.d.clientes||{}).map(Number);const id=String((ids.length?Math.max(...ids):0)+1);
+    S.d.clientes[id]={nome:"NOVO CLIENTE",status:"ATIVO",plano:"MENSAL",valor:0,dia:1,ini:new Date().toISOString().slice(0,10),cob:"PAGA PARA USAR",p:{}};
+    if(tab==="pag")$("#tab").value="cli"}
+  render();marcar(true);const w=$(".wrap");w.scrollTop=w.scrollHeight};
+$("#salvar").onclick=async()=>{$("#salvar").disabled=true;
+  try{await S.db.doc($("#mod").value).update({clientes:S.d.clientes,despesas:S.d.despesas||[]});S.dirty=false;toast("Alterações salvas.")}
+  catch(e){toast("Não foi possível salvar: "+(e.message||e));$("#salvar").disabled=false}};
+
+/* Excel */
+function planilhas(){const d=S.d,cl=d.clientes||{},wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Nº",...CLI.map(c=>c[1])],...ordem(cl).map(id=>[+id,...CLI.map(([k])=>cl[id][k]??"")])]),"Clientes");
+  for(const a of anos()){const linhas=ordem(cl).filter(id=>cl[id].p&&cl[id].p[a]).map(id=>[+id,cl[id].nome,...cl[id].p[a].map(v=>v??"")]);
+    if(linhas.length||String(a)===$("#ano").value)XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["Nº","Cliente",...MESES],...linhas]),"Pagamentos "+a)}
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([DES.map(c=>c[1]),...(d.despesas||[]).map(x=>DES.map(([k])=>x[k]??""))]),"Despesas");
+  return wb}
+$("#xls").onclick=()=>{if(!S.d)return;const nome=$("#mod").value==="painel/main"?"PAINEL DE LED":"PORTO FRANCO ONLINE PUBLICIDADE";
+  XLSX.writeFile(planilhas(),nome+" - tabela "+new Date().toISOString().slice(0,10)+".xlsx");toast("Planilha baixada.")};
+$("#up").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{const wb=XLSX.read(await f.arrayBuffer());const novo=JSON.parse(JSON.stringify(S.d));novo.clientes=novo.clientes||{};let nc=0,np=0,nd=null;
+    const sh=n=>wb.Sheets[n]?XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:""}):null;
+    const c=sh("Clientes");if(c){for(const r of c.slice(1)){const id=String(r[0]).trim();if(!id)continue;const o=novo.clientes[id]||{p:{}};
+      CLI.forEach(([k],j)=>{const v=r[j+1];o[k]=NUM.has(k)?num(v):String(v??"")});novo.clientes[id]=o;nc++}}
+    for(const n of wb.SheetNames){const m=/^Pagamentos (\d{4})$/.exec(n);if(!m)continue;for(const r of sh(n).slice(1)){const id=String(r[0]).trim();if(!id||!novo.clientes[id])continue;
+      novo.clientes[id].p=novo.clientes[id].p||{};novo.clientes[id].p[m[1]]=r.slice(2,14).map(num).concat(Array(12).fill("")).slice(0,12);np++}}
+    const d=sh("Despesas");if(d){const ant=novo.despesas||[];nd=d.slice(1).filter(r=>r.some(v=>v!=="")).map((r,i)=>{const o={k:(ant[i]&&ant[i].k)||Date.now()+i};DES.forEach(([k],j)=>o[k]=NUM.has(k)?num(r[j]):String(r[j]??""));return o});novo.despesas=nd}
+    if(!confirm(`Encontrei no Excel: ${nc} clientes, ${np} linhas de pagamento e ${nd?nd.length:0} despesas.\nIsso vai substituir os dados do sistema por esses. Continuar?`))return;
+    await S.db.doc($("#mod").value).update({clientes:novo.clientes,despesas:novo.despesas||[]});toast("Dados do Excel salvos no sistema.")}
+  catch(x){toast("Não consegui ler esse Excel: "+(x.message||x))}};
+
+function abrir(){if(S.unsub)S.unsub();S.d=null;render();
+  S.unsub=S.db.doc($("#mod").value).onSnapshot(s=>{if(S.dirty){toast("Os dados mudaram em outro aparelho. Salve ou recarregue a página.");return}
+    S.d=s.exists?s.data():{clientes:{},despesas:[]};S.d.clientes=S.d.clientes||{};preencherAnos();render()},()=>{$("#info").textContent="Sem acesso aos dados."})}
+$("#mod").onchange=()=>{if(S.dirty&&!confirm("Há alterações não salvas. Trocar mesmo assim?"))return;S.dirty=false;abrir()};
+$("#tab").onchange=render;$("#ano").onchange=render;
+window.addEventListener("beforeunload",e=>{if(S.dirty){e.preventDefault();e.returnValue=""}});
+
+async function modeloStatus(){if(!S.db)return;const t=[];for(const[n,r]of[["painel","Painel de LED"],["online","Publicidade"]]){const s=await S.db.doc("modelo/"+n).get();t.push(r+": "+(s.exists?"modelo enviado em "+(s.data().em||"").slice(0,10):"sem modelo"))}$("#mst").textContent=t.join(" · ")}
+for(const n of["painel","online"])document.getElementById("m"+n).onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{toast("Enviando modelo…");const u=new Uint8Array(await f.arrayBuffer());let bin="";for(let i=0;i<u.length;i+=32768)bin+=String.fromCharCode.apply(null,u.subarray(i,i+32768));
+    await S.db.doc("modelo/"+n).set({b:btoa(bin),nome:f.name,em:new Date().toISOString()});toast("Modelo salvo.");modeloStatus()}catch(x){toast("Não consegui enviar: "+(x.message||x))}};
+(async()=>{S.db=await window.claude.use("db");if(!S.db){$("#info").textContent="Entre com seu login para ver as tabelas.";return}
+  const u=await window.claude.use("user");S.ro=!u.isOwner();document.body.classList.toggle("ro",S.ro);
+  if(S.ro)$("#info").textContent="Seu acesso é somente consulta.";preencherAnos();abrir();modeloStatus()})();
+</script>
+</body>
+</html>
