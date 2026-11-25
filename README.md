@@ -9,7 +9,9 @@ Porto Franco Online/
 ├── config.js             endereço e chave publicável do Supabase
 ├── shim.js               ligação das telas com o banco (login e dados)
 ├── baixar.js             downloads nas propostas
-├── tabelas.html          tabelas como Excel + modelos do Excel completo
+├── tabelas.html          tabelas como Excel (editar, baixar e subir)
+├── excel.js              gera o Excel no formato ORIGINAL com os dados do sistema
+├── modelos/              planilhas originais criptografadas (painel.bin, online.bin)
 ├── publicidade/          Porto Franco Online Publicidade (só administrador)
 ├── painel/               Painel de LED (só administrador)
 ├── propostas/
@@ -18,7 +20,7 @@ Porto Franco Online/
 ├── sql/
 │   ├── 01-estrutura.sql        tabelas, funções e regras (vai para o GitHub)
 │   └── 02-dados-iniciais.sql   dados dos clientes (SÓ no Mac)
-├── excel/                      planilhas atualizadas (SÓ no Mac)
+├── excel/                      planilhas (SÓ no Mac); excel/originais = formato oficial
 ├── copias/                     cópias dos dados baixadas do sistema (SÓ no Mac)
 └── ACESSOS.md                  links, URL e chave publicável (SÓ no Mac)
 ```
@@ -34,8 +36,9 @@ Porto Franco Online/
 1. **Pedir a mudança ao Claude** (tela, função ou dados).
 2. **Código:** o Claude altera os arquivos, testa e envia ao GitHub. O site atualiza sozinho em 1 a 3 minutos.
 3. **Banco (Supabase):** se a mudança precisar, o Claude entrega um arquivo `sql/NN-descricao.sql`; abra o SQL Editor do projeto, cole e toque em **Run**.
-4. **Excel:** o Claude atualiza as planilhas da pasta `excel/`. Também dá para baixar pelo próprio sistema (botão **Baixar Excel** no Painel e na Publicidade, ou **Tabelas › Baixar Excel**).
-5. **Mac:** o Claude atualiza esta pasta com a mesma versão do GitHub.
+4. **Formato do Excel:** o botão **Exportar Excel** usa sempre a planilha original (pasta `excel/originais`). Para mudar o formato, envie a planilha nova ao Claude: ele troca o modelo em `modelos/`. Sem isso, o formato nunca muda.
+5. **Excel:** o Claude atualiza as planilhas da pasta `excel/`. Também dá para baixar pelo próprio sistema (botão **Baixar Excel** no Painel e na Publicidade, ou **Tabelas › Baixar Excel**).
+6. **Mac:** o Claude atualiza esta pasta com a mesma versão do GitHub.
 
 Para trazer mudanças feitas no Excel para o sistema: **Tabelas › Subir Excel** (usa a planilha baixada em Tabelas).
 

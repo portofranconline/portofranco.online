@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="shim.js"></script>
+<script src="excel.js"></script>
 <style>
 :root{--bg:#f2f5fa;--tx:#0b1f3a;--mu:#5b6b7f;--cy:#0b7285;--gr:#12a37a;--rd:#c62828}
 *{box-sizing:border-box}
@@ -119,8 +120,8 @@ function menu(p){
    <a class="mod" href="propostas/online/" target="_blank"><div class="ic">📝</div><div><b>Proposta Porto Franco Online</b><span>Planos de divulgação para enviar ao cliente</span></div><i>›</i></a>
    <a class="mod" href="propostas/painel/" target="_blank"><div class="ic">📄</div><div><b>Proposta Painel de LED</b><span>Proposta do painel para enviar ao cliente</span></div><i>›</i></a>
   </div>
-  <div class="card"><b>⬇ Exportar Excel</b><p class="mu">Planilha completa, no modelo da sua planilha original.</p>
-   <div class="row2"><a class="btn g lk" href="publicidade/?baixar=xl">⬇ Excel Publicidade</a><a class="btn g lk" href="painel/?baixar=xl">⬇ Excel Painel de LED</a></div></div>
+  <div class="card"><b>⬇ Exportar Excel</b><p class="mu">Baixa a sua planilha original, no mesmo formato, com os pagamentos, clientes e despesas atualizados do sistema.</p>
+   <div class="row2"><button class="btn g" onclick="PFOX.baixar('online',this)">⬇ Excel Publicidade</button><button class="btn g" onclick="PFOX.baixar('painel',this)">⬇ Excel Painel de LED</button></div></div>
   <div class="card" id="env"><b>📤 Enviar propostas</b><p class="mu">Links abertos: o cliente vê a proposta sem precisar de login.</p>
    ${LINKS.map((l,i)=>`<div class="li"><div class="sp"><b>${l[0]}</b><br><span class="mu">${esc(linkDe(l[1]))}</span></div><button class="btn g" data-cp="${i}">Copiar link</button></div>`).join("")}
    <div class="row2"><button class="btn g" id="cpall">📋 Copiar os dois links</button><a class="btn lk" id="wa" target="_blank" rel="noopener" style="background:#25d366">💬 Enviar no WhatsApp</a></div></div>

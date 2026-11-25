@@ -4,3 +4,4 @@ copias/
 *.xlsx
 *.json.bak
 .DS_Store
+sql/03-chave-excel.sql

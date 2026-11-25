@@ -53,10 +53,6 @@ body.ro .ed{display:none!important}
 </div>
 <p class="mu" id="info"></p>
 <div class="wrap"><table id="t"></table></div>
-<div class="ed" style="background:#fff;border-radius:14px;padding:12px;margin-top:14px;box-shadow:0 1px 3px rgba(11,31,58,.08)"><b>📎 Modelos do Excel completo</b>
-<p class="mu">O botão "Baixar Excel" do Painel e da Publicidade usa a sua planilha original como modelo. Envie aqui o arquivo .xlsx de cada um (fica guardado só no banco, protegido pelo login).</p>
-<div class="bar"><label class="btn g" style="cursor:pointer">⬆ Modelo do Painel de LED<input type="file" id="mpainel" accept=".xlsx" hidden></label>
-<label class="btn g" style="cursor:pointer">⬆ Modelo da Publicidade<input type="file" id="monline" accept=".xlsx" hidden></label></div><p class="mu" id="mst"></p></div>
 </main>
 <div id="toast"></div>
 <script>
@@ -146,13 +142,9 @@ $("#mod").onchange=()=>{if(S.dirty&&!confirm("Há alterações não salvas. Troc
 $("#tab").onchange=render;$("#ano").onchange=render;
 window.addEventListener("beforeunload",e=>{if(S.dirty){e.preventDefault();e.returnValue=""}});
 
-async function modeloStatus(){if(!S.db)return;const t=[];for(const[n,r]of[["painel","Painel de LED"],["online","Publicidade"]]){const s=await S.db.doc("modelo/"+n).get();t.push(r+": "+(s.exists?"modelo enviado em "+(s.data().em||"").slice(0,10):"sem modelo"))}$("#mst").textContent=t.join(" · ")}
-for(const n of["painel","online"])document.getElementById("m"+n).onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
-  try{toast("Enviando modelo…");const u=new Uint8Array(await f.arrayBuffer());let bin="";for(let i=0;i<u.length;i+=32768)bin+=String.fromCharCode.apply(null,u.subarray(i,i+32768));
-    await S.db.doc("modelo/"+n).set({b:btoa(bin),nome:f.name,em:new Date().toISOString()});toast("Modelo salvo.");modeloStatus()}catch(x){toast("Não consegui enviar: "+(x.message||x))}};
 (async()=>{S.db=await window.claude.use("db");if(!S.db){$("#info").textContent="Entre com seu login para ver as tabelas.";return}
   const u=await window.claude.use("user");S.ro=!u.isOwner();document.body.classList.toggle("ro",S.ro);
-  if(S.ro)$("#info").textContent="Seu acesso é somente consulta.";preencherAnos();abrir();modeloStatus()})();
+  if(S.ro)$("#info").textContent="Seu acesso é somente consulta.";preencherAnos();abrir()})();
 </script>
 </body>
 </html>
