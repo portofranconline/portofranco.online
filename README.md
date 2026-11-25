@@ -1,39 +1,46 @@
-# Sistema Porto Franco Online (privado)
+# Sistema Porto Franco Online
 
-Site com login que reúne:
+Site com login: **https://portofranconline.github.io/portofranco.online/**
 
-| Caminho | O que é | Precisa de login? |
-|---|---|---|
-| `/` | Entrada, menu, logins de acesso e troca de senha | — |
-| `/painel/` | Painel de LED: clientes, pagamentos, despesas, recibos, Excel e PDF | Sim |
-| `/publicidade/` | Porto Franco Online Publicidade: clientes, pagamentos, despesas, Excel e PDF | Sim |
-| `/tabelas.html` | Tabelas editáveis (como Excel), baixar e subir Excel | Sim |
-| `/propostas/painel/` | Proposta do Painel de LED para o cliente | Não (é para enviar ao cliente) |
-| `/propostas/online/` | Proposta de divulgação do Porto Franco Online | Não (é para enviar ao cliente) |
+## Pastas
+```
+Porto Franco Online/
+├── index.html            entrada, login e menu
+├── config.js             endereço e chave publicável do Supabase
+├── shim.js               ligação das telas com o banco (login e dados)
+├── baixar.js             downloads nas propostas
+├── tabelas.html          tabelas como Excel + modelos do Excel completo
+├── publicidade/          Porto Franco Online Publicidade (só administrador)
+├── painel/               Painel de LED (só administrador)
+├── propostas/
+│   ├── online/           Proposta Porto Franco Online (aberta ao cliente)
+│   └── painel/           Proposta Painel de LED (aberta ao cliente)
+├── sql/
+│   ├── 01-estrutura.sql        tabelas, funções e regras (vai para o GitHub)
+│   └── 02-dados-iniciais.sql   dados dos clientes (SÓ no Mac)
+└── excel/                      planilhas atualizadas (SÓ no Mac)
+```
 
-## Banco de dados (Supabase)
-- Projeto: `portofranco.online` (organização Porto Franco Publicidade), URL em `config.js`.
-- Tabela `public.app_docs` (`id`, `data`): `painel/main`, `online/main`, `proposta/main`, `tema/main`, `fotos/<n>`.
-- Tabela `public.perfis`: quem pode entrar e com qual acesso.
-- Instalação já feita em 25/11/2026. O arquivo `sql/instalacao.sql` (com os dados dos clientes) **não fica no GitHub**: está guardado só no Mac, em Claude › Projetos › Porto Franco Online › sql.
+## Onde fica cada coisa
+| Onde | O quê |
+|---|---|
+| GitHub `portofranconline/portofranco.online` (público) | código do site, sem dados de clientes |
+| Supabase `portofranco.online` (Porto Franco Publicidade) | dados: clientes, pagamentos, despesas, modelos do Excel, logins |
+| Mac `Claude › Projetos › Porto Franco Online` | cópia completa: código + sql + excel |
+
+## Como atualizar (sempre o mesmo procedimento)
+1. **Pedir a mudança ao Claude** (tela, função ou dados).
+2. **Código:** o Claude altera os arquivos, testa e envia ao GitHub. O site atualiza sozinho em 1 a 3 minutos.
+3. **Banco (Supabase):** se a mudança precisar, o Claude entrega um arquivo `sql/NN-descricao.sql`; abra o SQL Editor do projeto, cole e toque em **Run**.
+4. **Excel:** o Claude atualiza as planilhas da pasta `excel/`. Também dá para baixar pelo próprio sistema (botão **Baixar Excel** no Painel e na Publicidade, ou **Tabelas › Baixar Excel**).
+5. **Mac:** o Claude atualiza esta pasta com a mesma versão do GitHub.
+
+Para trazer mudanças feitas no Excel para o sistema: **Tabelas › Subir Excel** (usa a planilha baixada em Tabelas).
 
 ## Acesso
-Só o **Administrador** vê e altera Publicidade, Painel de LED e Tabelas, cria logins e envia as propostas. Outros logins não veem os dados.
-
-Os logins viram e-mails internos (`kaliel@pfonline.local`), que nunca recebem mensagens.
+Só o **Administrador** vê e altera Publicidade, Painel de LED e Tabelas, cria logins e envia as propostas. As propostas abrem para o cliente sem login.
 
 ## Segurança
 - O código é público (GitHub Pages), mas os dados não: sem login de administrador o banco não entrega nada.
-- A chave em `config.js` é a publicável (`sb_publishable_`): ela é feita para ficar no site. Quem protege os dados são o login e as regras do banco (RLS): sem login, ninguém lê nem grava nada.
-- **Nunca** coloque a chave `sb_secret_` em nenhum arquivo.
-
-## Publicação (GitHub Pages, igual ao controle de estoque)
-Settings → Pages → Source: **Deploy from a branch** → Branch: **main** / **(root)** → Save.
-Endereço: https://portofranconline.github.io/portofranco.online/
-
-## Abrir no computador (teste)
-Na pasta do projeto, no Terminal:
-
-    python3 -m http.server 5500
-
-e abra http://localhost:5500
+- `config.js` tem só a chave publicável (`sb_publishable_`). **Nunca** coloque a chave `sb_secret_` em nenhum arquivo.
+- `sql/02-dados-iniciais.sql` e a pasta `excel/` nunca vão para o GitHub (estão no `.gitignore`).
