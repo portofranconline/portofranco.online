@@ -1,2 +1,4 @@
-sql/
+sql/02-dados-iniciais.sql
+excel/
+*.xlsx
 .DS_Store
