@@ -1,7 +1,6 @@
 sql/02-dados-iniciais.sql
 excel/
 copias/
-ACESSOS.md
 *.xlsx
 *.json.bak
 .DS_Store
