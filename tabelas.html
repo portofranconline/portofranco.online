@@ -59,7 +59,7 @@ body.ro .ed{display:none!important}
 <script>
 const $=s=>document.querySelector(s);
 const MESES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
-const CLI=[["nome","Nome"],["status","Status"],["plano","Plano"],["valor","Valor"],["dia","Dia venc."],["ini","Início (AAAA-MM-DD)"],["cob","Cobrança"],["ig","Instagram"],["tel","Telefone"],["resp","Responsável"],["obs","Observação"]];
+const CLI=[["nome","Nome"],["status","Status"],["plano","Plano"],["valor","Valor"],["dia","Dia venc."],["ini","Início (AAAA-MM-DD)"],["desde","Cliente desde (AAAA-MM)"],["cob","Cobrança"],["ig","Instagram"],["tel","Telefone"],["resp","Responsável"],["obs","Observação"]];
 const DES=[["ano","Ano"],["mes","Mês (1-12)"],["cat","Categoria"],["desc","Descrição"],["valor","Valor"],["ent","Entrada (AAAA-MM-DD)"],["pago","Pago em (AAAA-MM-DD)"]];
 const NUM=new Set(["valor","dia","ano","mes"]);
 let S={db:null,ro:true,d:null,unsub:null,dirty:false};
@@ -72,6 +72,13 @@ function anos(){const y=new Date().getFullYear(),set=new Set([y-1,y,y+1]);
 function preencherAnos(){const cur=$("#ano").value||String(new Date().getFullYear());$("#ano").innerHTML=anos().map(a=>`<option ${String(a)===cur?"selected":""}>${a}</option>`).join("")}
 function ordem(o){return Object.keys(o).sort((a,b)=>(+a)-(+b))}
 
+const MES3=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function desdeDe(c){if(c.desde)return c.desde;let m=null;const p=c.p||{};
+  for(const y of Object.keys(p).sort()){const a=p[y]||[];for(let i=0;i<12;i++){if(a[i]!==""&&a[i]!=null){const k=y+"-"+String(i+1).padStart(2,"0");if(!m||k<m)m=k;break}}}
+  const ini=(c.ini||"").slice(0,7);if(/^\d{4}-\d{2}$/.test(ini)&&(!m||ini<m))m=ini;return m||""}
+function desdeTxt(ym){if(!/^\d{4}-\d{2}$/.test(ym||""))return"";const [y,m]=ym.split("-").map(Number),h=new Date();let t=(h.getFullYear()-y)*12+(h.getMonth()+1-m);if(t<0)t=0;
+  const a=Math.floor(t/12),r=t%12;return MES3[m-1]+"/"+y+" ("+(a?a+(a>1?" anos":" ano"):"")+(a&&r?" e ":"")+(r||!a?r+(r===1?" mês":" meses"):"")+")"}
+function totalPago(c){let s=0;for(const a of Object.values(c.p||{}))for(const v of (a||[]))if(typeof v==="number")s+=v;return s}
 function render(){
   if(!S.d){$("#t").innerHTML="";$("#info").textContent="Carregando…";return}
   const tab=$("#tab").value,ano=$("#ano").value;$("#ano").style.display=tab==="pag"?"":"none";
@@ -83,9 +90,9 @@ function render(){
         MESES.map((m,i)=>`<td><input ${ro} data-id="${esc(id)}" data-m="${i}" value="${esc(p[i]??"")}"></td>`).join("")+"</tr>"}
     $("#info").textContent="Digite o valor pago no mês, ou um texto: ABONADO, PERMUTA, PAGO… Deixe vazio se não pagou.";
   }else if(tab==="cli"){
-    h="<tr><th>Nº</th>"+CLI.map(c=>`<th>${c[1]}</th>`).join("")+"<th class='ed'></th></tr>";
+    h="<tr><th>Nº</th>"+CLI.map(c=>`<th>${c[1]}</th>`).join("")+"<th>Tempo de cliente</th><th>Total pago</th><th class='ed'></th></tr>";
     for(const id of ordem(cl)){const c=cl[id];
-      h+=`<tr><td class="id">${esc(id)}</td>`+CLI.map(([k])=>`<td><input ${ro} data-id="${esc(id)}" data-k="${k}" value="${esc(c[k]??"")}"></td>`).join("")+`<td class="x ed"><button data-del="${esc(id)}" title="Apagar cliente">✕</button></td></tr>`}
+      h+=`<tr><td class="id">${esc(id)}</td>`+CLI.map(([k])=>`<td><input ${ro} data-id="${esc(id)}" data-k="${k}" value="${esc(c[k]??"")}"></td>`).join("")+`<td class="id">${esc(desdeTxt(c.desde||desdeDe(c)).replace(/^[a-z]+\/\d+ \((.*)\)$/,"$1"))}</td><td class="id">${totalPago(c).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}</td><td class="x ed"><button data-del="${esc(id)}" title="Apagar cliente">✕</button></td></tr>`}
     $("#info").textContent="Status: ATIVO, ENCERRADO ou PERMUTA. Cobrança: PAGA PARA USAR ou USA PARA PAGAR.";
   }else{
     const ds=S.d.despesas||[];
