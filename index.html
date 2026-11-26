@@ -68,6 +68,7 @@ a.card.fn{display:block;text-decoration:none;color:var(--tx)}.fe{display:grid;gr
 #pxbox{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:520px;margin:auto;max-height:94vh;overflow:auto}
 .pxqr{display:flex;justify-content:center;margin:12px 0}.pxqr svg{width:240px;height:240px;display:block}.pxqrw{position:relative}.pxqrw img{position:absolute;left:50%;top:50%;width:62px;height:62px;object-fit:contain;transform:translate(-50%,-50%);background:#fff;border-radius:12px;padding:4px;box-shadow:0 0 0 3px #fff}
 .pxb{border:0;border-radius:10px;background:#32bcad;color:#fff;font-weight:800;font-size:12px;padding:7px 9px;cursor:pointer;white-space:nowrap}
+.pxkey{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#eef8f7;border:1px solid #bfe9e4;border-radius:12px;padding:10px 12px;margin-bottom:10px}.pxkey small{display:block;color:#5b6b7f;font-size:11px}.pxkey b{display:block;font-size:15px;word-break:break-all}.pxkey .btn{width:auto;margin:0;padding:9px 10px;font-size:12px;white-space:nowrap}
 .okbox{background:#dcf5ea;color:#12805c;font-weight:800;border-radius:12px;padding:12px;margin-top:10px}
 details.pxcfg{margin-top:12px;border:1px solid #e6ecf4;border-radius:12px;padding:10px}details.pxcfg summary{font-weight:800;cursor:pointer}.pxseg{margin-top:10px;padding-top:6px;border-top:1px dashed #e6ecf4}
 textarea#pxcc{font:12px ui-monospace,monospace}
@@ -155,6 +156,7 @@ function menu(p){
     ${["online","painel"].map(k=>`<div class="pxseg"><b>${k==="online"?"📣 Publicidade (divulgação na página)":"💡 Painel de LED"}</b>
      <div class="row2"><div><label>Tipo da chave</label><select id="ptp_${k}"><option value="cnpj">CNPJ</option><option value="cpf">CPF</option><option value="cel">Celular</option><option value="email">E-mail</option><option value="aleat">Aleatória</option></select></div>
      <div><label>Chave PIX</label><input id="pky_${k}" placeholder="em branco = usa a chave acima"></div></div>
+     <label>Banco</label><input id="pbk_${k}" placeholder="Ex.: Nubank, PicPay">
      <label>Nome no QR Code (até 25 letras)</label><input id="pnm_${k}" maxlength="25">
      <label>Mensagem do PIX (o mês entra no final)</label><input id="pms_${k}" maxlength="40">
      <label>Título do recibo</label><input id="prc_${k}"></div>`).join("")}
@@ -184,12 +186,12 @@ function menu(p){
 
 /* ---------- configurações ---------- */
 const CFG_PADRAO={cidade:"PORTO FRANCO",
-  px:{online:{tipo:"cnpj",chave:"",nome:"PORTO FRANCO ONLINE",msg:"Divulgacao @portofranco.online",recibo:"Recibo – Divulgação Porto Franco Online"},
-      painel:{tipo:"cnpj",chave:"",nome:"PAINEL LED PORTO FRANCO",msg:"Publicidade Painel de LED",recibo:"Recibo – Publicidade Painel de LED"}},dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:",pix:"",
+  px:{online:{tipo:"email",chave:"portofranconline@gmail.com",banco:"PicPay",nome:"PORTO FRANCO ONLINE",msg:"Divulgacao @portofranco.online",recibo:"Recibo – Divulgação Porto Franco Online"},
+      painel:{tipo:"cnpj",chave:"57.683.150/0001-64",banco:"Nubank",nome:"PAINEL LED PORTO FRANCO",msg:"Publicidade Painel de LED",recibo:"Recibo – Publicidade Painel de LED"}},dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:",pix:"",
   cobAv:"Olá, {responsavel}! Tudo bem? 😊\nPassando para lembrar que a mensalidade da {nome} com o Porto Franco Online, no valor de {valor}, vence em {vencimento}.\nChave PIX: {pix}\nObrigado pela parceria!",
   cobVe:"Olá, {responsavel}! Tudo bem?\nConsta em aberto a mensalidade da {nome} com o Porto Franco Online ({meses}), total de {valor}.\nChave PIX: {pix}\nSe já pagou, por favor desconsidere e me envie o comprovante. Obrigado!"};
 let CFG={...CFG_PADRAO};
-async function carregarCfg(){try{const s=await PFO.db.doc("config/main").get();if(s.exists){const d=s.data();CFG={...CFG_PADRAO,...d,px:{online:{...CFG_PADRAO.px.online,...((d.px||{}).online||{})},painel:{...CFG_PADRAO.px.painel,...((d.px||{}).painel||{})}}}}}catch(e){}}
+async function carregarCfg(){try{const s=await PFO.db.doc("config/main").get();if(s.exists){const d=s.data();CFG={...CFG_PADRAO,...d,px:{online:{...CFG_PADRAO.px.online,...((d.px||{}).online||{})},painel:{...CFG_PADRAO.px.painel,...((d.px||{}).painel||{})}}};for(const k of["online","painel"])if(!CFG.px[k].chave){const p=CFG_PADRAO.px[k];CFG.px[k].chave=p.chave;CFG.px[k].tipo=p.tipo;CFG.px[k].banco=p.banco}}}catch(e){}}
 
 /* ---------- vencimentos (mesma regra da aba Vencimentos dos módulos) ---------- */
 const brl=v=>"R$ "+(Math.round(v*100)/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -266,6 +268,7 @@ async function painelFunil(){const box=$("#funilres");if(!box)return;
 function trocaSenha(){$("#tsn").onclick=async()=>{const v=$("#ns").value;if(v.length<6)return toast("Use pelo menos 6 caracteres.");const r=await sb().auth.updateUser({password:v});toast(r.error?msgErro(r.error):"Senha alterada.");$("#ns").value=""}}
 
 /* ---------- PIX (BR Code) + recibo ---------- */
+const TIPOS_PIX={cnpj:"CNPJ",cpf:"CPF",cel:"Celular",email:"E-mail",aleat:"Aleatória"};
 const MESES_N=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const semAcento=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 @.\-/]/g,"").trim();
 function crc16(t){let c=0xFFFF;for(let i=0;i<t.length;i++){c^=t.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}return c.toString(16).toUpperCase().padStart(4,"0")}
@@ -279,8 +282,8 @@ function brcode({chave,nome,cidade,valor,msg,txid}){
   let p=tlv("00","01")+tlv("26",ma)+tlv("52","0000")+tlv("53","986")+(valor>0?tlv("54",valor.toFixed(2)):"")+tlv("58","BR")+
     tlv("59",semAcento(nome).toUpperCase().slice(0,25)||"RECEBEDOR")+tlv("60",semAcento(cidade).toUpperCase().slice(0,15)||"BRASIL")+tlv("62",tlv("05",(txid||"***").replace(/[^A-Za-z0-9]/g,"").slice(0,25)||"***"))+"6304";
   return p+crc16(p)}
-function pxCfgPreencher(){for(const k of["online","painel"]){const c=CFG.px[k];$("#ptp_"+k).value=c.tipo;$("#pky_"+k).value=c.chave;$("#pnm_"+k).value=c.nome;$("#pms_"+k).value=c.msg;$("#prc_"+k).value=c.recibo}$("#pcid").value=CFG.cidade}
-function pxCfgLer(){for(const k of["online","painel"])CFG.px[k]={tipo:$("#ptp_"+k).value,chave:$("#pky_"+k).value.trim(),nome:$("#pnm_"+k).value.trim()||CFG_PADRAO.px[k].nome,msg:$("#pms_"+k).value.trim(),recibo:$("#prc_"+k).value.trim()||CFG_PADRAO.px[k].recibo};CFG.cidade=$("#pcid").value.trim()||"PORTO FRANCO"}
+function pxCfgPreencher(){for(const k of["online","painel"]){const c=CFG.px[k];$("#ptp_"+k).value=c.tipo;$("#pky_"+k).value=c.chave;$("#pbk_"+k).value=c.banco||"";$("#pnm_"+k).value=c.nome;$("#pms_"+k).value=c.msg;$("#prc_"+k).value=c.recibo}$("#pcid").value=CFG.cidade}
+function pxCfgLer(){for(const k of["online","painel"])CFG.px[k]={tipo:$("#ptp_"+k).value,chave:$("#pky_"+k).value.trim(),banco:$("#pbk_"+k).value.trim(),nome:$("#pnm_"+k).value.trim()||CFG_PADRAO.px[k].nome,msg:$("#pms_"+k).value.trim(),recibo:$("#prc_"+k).value.trim()||CFG_PADRAO.px[k].recibo};CFG.cidade=$("#pcid").value.trim()||"PORTO FRANCO"}
 let PXDOCS={};
 async function pxListar(){const mod=$("#pxmod").value;try{const s=await PFO.db.doc(mod).get();PXDOCS[mod]=s.exists?s.data():{clientes:{}};
   const cl=Object.entries(PXDOCS[mod].clientes||{}).filter(([i,c])=>c.status==="ATIVO"||c.status==="NEGATIVO").sort((a,b)=>(a[1].nome||"").localeCompare(b[1].nome||""));
@@ -298,10 +301,11 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
   const sh=$("#pxsheet");sh.classList.add("on");
   const anos=[y-1,y,y+1];
   $("#pxbox").innerHTML=`<div class="vh"><b>💠 PIX · ${esc(c.nome)}</b><button class="btn g" id="pxx" style="width:auto;margin:0;padding:8px 12px">✕</button></div>
-   <p class="mu">${seg==="online"?"📣 Publicidade":"💡 Painel de LED"} · chave ${esc(chave)}</p>
+   <p class="mu">${seg==="online"?"📣 Publicidade":"💡 Painel de LED"}</p>
    <div class="row2"><div><label>Valor (R$)</label><input id="pxv" inputmode="decimal" value="${String((+c.valor||0).toFixed(2)).replace(".",",")}"></div>
    <div><label>Mês de referência</label><select id="pxm">${anos.map(a=>MESES_N.map((n,i)=>`<option value="${a}-${i}" ${a===y&&i===m?"selected":""}>${n}/${a}</option>`).join("")).join("")}</select></div></div>
    <div id="pxqr" class="pxqr"></div>
+   <div class="pxkey"><div><small>Chave PIX (${TIPOS_PIX[P.tipo]||"chave"})</small><b>${esc(P.chave||CFG.pix)}</b><small>${esc(P.banco||"")}${P.banco?" · ":""}${esc(P.nome)}</small></div><button class="btn g" id="pxck">📋 Copiar chave</button></div>
    <label>PIX copia e cola</label><textarea id="pxcc" rows="3" readonly></textarea>
    <div class="row2"><button class="btn g" id="pxcp">📋 Copiar código</button><button class="btn" id="pxwa" style="background:#25d366">💬 Enviar no WhatsApp</button></div>
    <hr style="border:0;border-top:1px solid #e6ecf4;margin:14px 0 4px">
@@ -313,9 +317,10 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
     const code=brcode({chave,nome:P.nome,cidade:CFG.cidade,valor:val(),msg:(P.msg?P.msg+" ":"")+MESES_N[am].slice(0,3)+"/"+ay,txid});
     $("#pxcc").value=code;try{const q=qrcode(0,"H");q.addData(code);q.make();$("#pxqr").innerHTML='<div class="pxqrw">'+q.createSvgTag({cellSize:5,margin:2})+'<img src="logo.png" alt=""></div>'}catch(err){$("#pxqr").innerHTML='<p class="mu">QR Code indisponível (sem internet?). Use o copia e cola.</p>'}return code};
   gerar();$("#pxv").oninput=gerar;$("#pxm").onchange=gerar;$("#pxx").onclick=()=>sh.classList.remove("on");
+  $("#pxck").onclick=async()=>{try{await navigator.clipboard.writeText(P.chave||CFG.pix);toast("Chave PIX copiada.")}catch(err){toast(P.chave||CFG.pix)}};
   $("#pxcp").onclick=async()=>{try{await navigator.clipboard.writeText($("#pxcc").value);toast("Código PIX copiado.")}catch(err){$("#pxcc").select();toast("Copie o código selecionado.")}};
   $("#pxwa").onclick=()=>{let f=telefone(c.tel);if(!f){const t=prompt("WhatsApp de "+c.nome+" (com DDD):");if(!t)return;f=telefone(t);if(!f)return toast("Número inválido.")}
-    const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nPIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante. Obrigado!`;
+    const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante. Obrigado!`;
     window.open("https://api.whatsapp.com/send?phone="+f+"&text="+encodeURIComponent(msg),"_blank")};
   $("#pxok").onclick=async()=>{const v=val(),[ay,am]=ref();if(!(v>0))return toast("Digite o valor.");
     if(!confirm(`Confirmar que ${c.nome} pagou ${brl(v)} referente a ${MESES_N[am]}/${ay}?`))return;
@@ -346,7 +351,7 @@ async function reciboPdf({n,seg,P,c,valor,am,ay,data,chave}){
   linha("RECEBEMOS DE",c.nome+(c.resp?" — "+c.resp:""));
   linha("VALOR",brl(valor));
   linha("REFERENTE A",(seg==="online"?"Divulgação na página @portofranco.online":"Publicidade no Painel de LED")+" — "+MESES_N[am]+"/"+ay);
-  linha("FORMA DE PAGAMENTO","PIX ("+chave+")");
+  linha("FORMA DE PAGAMENTO","PIX – "+(P.chave||chave)+(P.banco?" ("+P.banco+")":""));
   linha("DATA DO RECEBIMENTO",data.toLocaleDateString("pt-BR"));
   doc.setDrawColor(200,210,225);doc.line(30,yy+14,W-30,yy+14);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(91,107,127);
   doc.text(P.nome||"Porto Franco Online",W/2,yy+19,{align:"center"});doc.text((CFG.cidade||"Porto Franco")+" — MA",W/2,yy+24,{align:"center"});
