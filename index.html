@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>/* sempre abrir a versão mais nova */window.PFO_VERSAO="2026-11-26b";
+<script>/* sempre abrir a versão mais nova */window.PFO_VERSAO="2026-11-26c";
 (function(){try{fetch(location.pathname+"?nv="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(h=>{const m=h.match(/PFO_VERSAO="([^"]+)"/);
  if(m&&m[1]!==window.PFO_VERSAO){const u=new URL(location.href);if(u.searchParams.get("v")===m[1])return;u.searchParams.set("v",m[1]);location.replace(u.href)}}).catch(()=>{})}catch(e){}})();</script>
 
@@ -161,7 +161,8 @@ function menu(p){
      <div class="row2"><div><label>Tipo da chave</label><select id="ptp_${k}"><option value="cnpj">CNPJ</option><option value="cpf">CPF</option><option value="cel">Celular</option><option value="email">E-mail</option><option value="aleat">Aleatória</option></select></div>
      <div><label>Chave PIX</label><input id="pky_${k}" placeholder="em branco = usa a chave acima"></div></div>
      <label>Banco</label><input id="pbk_${k}" placeholder="Ex.: Nubank, PicPay">
-     <label>Nome no QR Code (até 25 letras)</label><input id="pnm_${k}" maxlength="25">
+     <label>Favorecido (nome completo, aparece na mensagem e no recibo)</label><input id="pfv_${k}">
+     <label>Nome dentro do QR Code (até 25 letras)</label><input id="pnm_${k}" maxlength="25">
      <label>Mensagem do PIX (o mês entra no final)</label><input id="pms_${k}" maxlength="40">
      <label>Título do recibo</label><input id="prc_${k}"></div>`).join("")}
     <label>Cidade</label><input id="pcid" maxlength="15"></details>
@@ -190,12 +191,14 @@ function menu(p){
 
 /* ---------- configurações ---------- */
 const CFG_PADRAO={cidade:"PORTO FRANCO",
-  px:{online:{tipo:"email",chave:"portofranconline@gmail.com",banco:"PicPay",nome:"PORTO FRANCO ONLINE",msg:"Divulgacao @portofranco.online",recibo:"Recibo – Divulgação Porto Franco Online"},
-      painel:{tipo:"cnpj",chave:"57.683.150/0001-64",banco:"Nubank",nome:"PAINEL LED PORTO FRANCO",msg:"Publicidade Painel de LED",recibo:"Recibo – Publicidade Painel de LED"}},dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:",pix:"",
+  px:{online:{tipo:"email",chave:"portofranconline@gmail.com",banco:"PicPay",nome:"LUIS RICARDO M S ARRUDA",favorecido:"LUIS RICARDO MENEZES DA SILVA ARRUDA",msg:"Divulgacao @portofranco.online",recibo:"Recibo – Divulgação Porto Franco Online"},
+      painel:{tipo:"cnpj",chave:"57.683.150/0001-64",banco:"Nubank",nome:"PAINEL LED PORTO FRANCO",favorecido:"PAINEL LED PORTO FRANCO",msg:"Publicidade Painel de LED",recibo:"Recibo – Publicidade Painel de LED"}},dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:",pix:"",
   cobAv:"Olá, {responsavel}! Tudo bem? 😊\nPassando para lembrar que a mensalidade da {nome} com o Porto Franco Online, no valor de {valor}, vence em {vencimento}.\nChave PIX: {pix}\nObrigado pela parceria!",
   cobVe:"Olá, {responsavel}! Tudo bem?\nConsta em aberto a mensalidade da {nome} com o Porto Franco Online ({meses}), total de {valor}.\nChave PIX: {pix}\nSe já pagou, por favor desconsidere e me envie o comprovante. Obrigado!"};
 let CFG={...CFG_PADRAO};
-async function carregarCfg(){try{const s=await PFO.db.doc("config/main").get();if(s.exists){const d=s.data();CFG={...CFG_PADRAO,...d,px:{online:{...CFG_PADRAO.px.online,...((d.px||{}).online||{})},painel:{...CFG_PADRAO.px.painel,...((d.px||{}).painel||{})}}};for(const k of["online","painel"])if(!CFG.px[k].chave){const p=CFG_PADRAO.px[k];CFG.px[k].chave=p.chave;CFG.px[k].tipo=p.tipo;CFG.px[k].banco=p.banco}}}catch(e){}}
+async function carregarCfg(){try{const s=await PFO.db.doc("config/main").get();if(s.exists){const d=s.data();CFG={...CFG_PADRAO,...d,px:{online:{...CFG_PADRAO.px.online,...((d.px||{}).online||{})},painel:{...CFG_PADRAO.px.painel,...((d.px||{}).painel||{})}}};if(CFG.px.online.nome==="PORTO FRANCO ONLINE"){CFG.px.online.nome=CFG_PADRAO.px.online.nome;CFG.px.online.favorecido=CFG_PADRAO.px.online.favorecido}
+    for(const k of["online","painel"])if(!CFG.px[k].favorecido)CFG.px[k].favorecido=CFG.px[k].nome;
+    for(const k of["online","painel"])if(!CFG.px[k].chave){const p=CFG_PADRAO.px[k];CFG.px[k].chave=p.chave;CFG.px[k].tipo=p.tipo;CFG.px[k].banco=p.banco}}}catch(e){}}
 
 /* ---------- vencimentos (mesma regra da aba Vencimentos dos módulos) ---------- */
 const brl=v=>"R$ "+(Math.round(v*100)/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -272,11 +275,33 @@ function trocaSenha(){$("#tsn").onclick=async()=>{const v=$("#ns").value;if(v.le
 
 /* ---------- PIX (BR Code) + recibo ---------- */
 async function compartilhar(texto,blob,nome){
-  if(navigator.share){const d={text:texto};
+  if(navigator.share){const d={text:texto};if(blob&&navigator.clipboard)navigator.clipboard.writeText(texto).catch(()=>{});
     if(blob){const f=new File([blob],nome,{type:blob.type||"application/pdf"});if(navigator.canShare&&navigator.canShare({files:[f]}))d.files=[f]}
-    try{await navigator.share(d);return true}catch(e){if(e&&e.name==="AbortError")return false}}
+    try{await navigator.share(d);if(d.files)toast("A mensagem também foi copiada: se não aparecer no WhatsApp, cole na conversa.");return true}catch(e){if(e&&e.name==="AbortError")return false}}
   if(blob)PFO_SALVAR(blob,nome);
   window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(texto),"_blank");return true}
+let PXIMG=null,LOGO_IMG=null;
+function carregarLogo(){if(LOGO_IMG)return Promise.resolve(LOGO_IMG);return new Promise((ok,no)=>{const i=new Image();i.onload=()=>{LOGO_IMG=i;ok(i)};i.onerror=no;i.src="logo.png"})}
+async function pixImagem(q,P,c,valor,am,ay){
+  const W=720,H=1040,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  g.fillStyle="#ffffff";g.fillRect(0,0,W,H);g.fillStyle="#0b1f3a";g.fillRect(0,0,W,150);
+  let logo=null;try{logo=await carregarLogo()}catch(e){}
+  if(logo){g.fillStyle="#fff";g.beginPath();g.roundRect(30,25,170,100,18);g.fill();const r=Math.min(150/logo.width,84/logo.height);g.drawImage(logo,115-logo.width*r/2,75-logo.height*r/2,logo.width*r,logo.height*r)}
+  g.fillStyle="#fff";g.font="800 34px system-ui,-apple-system,Arial";g.fillText("Pagamento via PIX",225,72);
+  g.font="500 24px system-ui,-apple-system,Arial";g.fillText(P.recibo.replace(/^Recibo\s*–\s*/,""),225,110);
+  g.fillStyle="#0b1f3a";g.textAlign="center";g.font="800 30px system-ui,-apple-system,Arial";g.fillText(c.nome||"",W/2,205);
+  g.font="900 54px system-ui,-apple-system,Arial";g.fillStyle="#12805c";g.fillText(brl(valor),W/2,268);
+  g.fillStyle="#5b6b7f";g.font="500 24px system-ui,-apple-system,Arial";g.fillText("Referente a "+MESES_N[am].toLowerCase()+"/"+ay,W/2,304);
+  const n=q.getModuleCount(),tam=430,cel=tam/(n+4),x0=(W-tam)/2,y0=330;
+  g.fillStyle="#fff";g.fillRect(x0,y0,tam,tam);g.fillStyle="#000";
+  for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(q.isDark(r,k))g.fillRect(Math.floor(x0+(k+2)*cel),Math.floor(y0+(r+2)*cel),Math.ceil(cel),Math.ceil(cel));
+  if(logo){const L=110;g.fillStyle="#fff";g.beginPath();g.roundRect(W/2-L/2-6,y0+tam/2-L/2-6,L+12,L+12,18);g.fill();const r=Math.min(L/logo.width,L/logo.height);g.drawImage(logo,W/2-logo.width*r/2,y0+tam/2-logo.height*r/2,logo.width*r,logo.height*r)}
+  let y=y0+tam+50;g.fillStyle="#5b6b7f";g.font="600 22px system-ui,-apple-system,Arial";g.fillText("Chave PIX ("+(TIPOS_PIX[P.tipo]||"chave")+")"+(P.banco?" · "+P.banco:""),W/2,y);
+  g.fillStyle="#0b1f3a";g.font="800 32px system-ui,-apple-system,Arial";g.fillText(P.chave||CFG.pix||"",W/2,y+42);
+  g.fillStyle="#5b6b7f";g.font="600 22px system-ui,-apple-system,Arial";g.fillText("Favorecido",W/2,y+92);
+  g.fillStyle="#0b1f3a";g.font="700 26px system-ui,-apple-system,Arial";g.fillText(P.favorecido||P.nome,W/2,y+126,W-60);
+  g.fillStyle="#5b6b7f";g.font="500 20px system-ui,-apple-system,Arial";g.fillText("Abra o app do banco › PIX › Ler QR Code",W/2,H-28);
+  return await new Promise(ok=>cv.toBlob(ok,"image/png"))}
 const TIPOS_PIX={cnpj:"CNPJ",cpf:"CPF",cel:"Celular",email:"E-mail",aleat:"Aleatória"};
 const MESES_N=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const semAcento=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 @.\-/]/g,"").trim();
@@ -291,8 +316,8 @@ function brcode({chave,nome,cidade,valor,msg,txid}){
   let p=tlv("00","01")+tlv("26",ma)+tlv("52","0000")+tlv("53","986")+(valor>0?tlv("54",valor.toFixed(2)):"")+tlv("58","BR")+
     tlv("59",semAcento(nome).toUpperCase().slice(0,25)||"RECEBEDOR")+tlv("60",semAcento(cidade).toUpperCase().slice(0,15)||"BRASIL")+tlv("62",tlv("05",(txid||"***").replace(/[^A-Za-z0-9]/g,"").slice(0,25)||"***"))+"6304";
   return p+crc16(p)}
-function pxCfgPreencher(){for(const k of["online","painel"]){const c=CFG.px[k];$("#ptp_"+k).value=c.tipo;$("#pky_"+k).value=c.chave;$("#pbk_"+k).value=c.banco||"";$("#pnm_"+k).value=c.nome;$("#pms_"+k).value=c.msg;$("#prc_"+k).value=c.recibo}$("#pcid").value=CFG.cidade}
-function pxCfgLer(){for(const k of["online","painel"])CFG.px[k]={tipo:$("#ptp_"+k).value,chave:$("#pky_"+k).value.trim(),banco:$("#pbk_"+k).value.trim(),nome:$("#pnm_"+k).value.trim()||CFG_PADRAO.px[k].nome,msg:$("#pms_"+k).value.trim(),recibo:$("#prc_"+k).value.trim()||CFG_PADRAO.px[k].recibo};CFG.cidade=$("#pcid").value.trim()||"PORTO FRANCO"}
+function pxCfgPreencher(){for(const k of["online","painel"]){const c=CFG.px[k];$("#ptp_"+k).value=c.tipo;$("#pky_"+k).value=c.chave;$("#pbk_"+k).value=c.banco||"";$("#pnm_"+k).value=c.nome;$("#pfv_"+k).value=c.favorecido||c.nome;$("#pms_"+k).value=c.msg;$("#prc_"+k).value=c.recibo}$("#pcid").value=CFG.cidade}
+function pxCfgLer(){for(const k of["online","painel"])CFG.px[k]={tipo:$("#ptp_"+k).value,chave:$("#pky_"+k).value.trim(),banco:$("#pbk_"+k).value.trim(),nome:$("#pnm_"+k).value.trim()||CFG_PADRAO.px[k].nome,favorecido:$("#pfv_"+k).value.trim()||$("#pnm_"+k).value.trim()||CFG_PADRAO.px[k].favorecido,msg:$("#pms_"+k).value.trim(),recibo:$("#prc_"+k).value.trim()||CFG_PADRAO.px[k].recibo};CFG.cidade=$("#pcid").value.trim()||"PORTO FRANCO"}
 let PXDOCS={};
 async function pxListar(){const mod=$("#pxmod").value;try{const s=await PFO.db.doc(mod).get();PXDOCS[mod]=s.exists?s.data():{clientes:{}};
   const cl=Object.entries(PXDOCS[mod].clientes||{}).filter(([i,c])=>c.status==="ATIVO"||c.status==="NEGATIVO").sort((a,b)=>(a[1].nome||"").localeCompare(b[1].nome||""));
@@ -314,7 +339,7 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
    <div class="row2"><div><label>Valor (R$)</label><input id="pxv" inputmode="decimal" value="${String((+c.valor||0).toFixed(2)).replace(".",",")}"></div>
    <div><label>Mês de referência</label><select id="pxm">${anos.map(a=>MESES_N.map((n,i)=>`<option value="${a}-${i}" ${a===y&&i===m?"selected":""}>${n}/${a}</option>`).join("")).join("")}</select></div></div>
    <div id="pxqr" class="pxqr"></div>
-   <div class="pxkey"><div><small>Chave PIX (${TIPOS_PIX[P.tipo]||"chave"})</small><b>${esc(P.chave||CFG.pix)}</b><small>${esc(P.banco||"")}${P.banco?" · ":""}${esc(P.nome)}</small></div><button class="btn g" id="pxck">📋 Copiar chave</button></div>
+   <div class="pxkey"><div><small>Chave PIX (${TIPOS_PIX[P.tipo]||"chave"})</small><b>${esc(P.chave||CFG.pix)}</b><small>${esc(P.banco||"")}${P.banco?" · ":""}${esc(P.favorecido||P.nome)}</small></div><button class="btn g" id="pxck">📋 Copiar chave</button></div>
    <label>PIX copia e cola</label><textarea id="pxcc" rows="3" readonly></textarea>
    <div class="row2"><button class="btn g" id="pxcp">📋 Copiar código</button><button class="btn" id="pxwa" style="background:#25d366">📤 Compartilhar</button></div>
    <hr style="border:0;border-top:1px solid #e6ecf4;margin:14px 0 4px">
@@ -324,12 +349,12 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
   const val=()=>parseFloat(String($("#pxv").value).replace(/\./g,"").replace(",","."))||0,ref=()=>$("#pxm").value.split("-").map(Number);
   const gerar=()=>{const [ay,am]=ref(),txid=(seg==="online"?"PFO":"LED")+id+"M"+(am+1)+"A"+String(ay).slice(2);
     const code=brcode({chave,nome:P.nome,cidade:CFG.cidade,valor:val(),msg:(P.msg?P.msg+" ":"")+MESES_N[am].slice(0,3)+"/"+ay,txid});
-    $("#pxcc").value=code;try{const q=qrcode(0,"H");q.addData(code);q.make();$("#pxqr").innerHTML='<div class="pxqrw">'+q.createSvgTag({cellSize:5,margin:2})+'<img src="logo.png" alt=""></div>'}catch(err){$("#pxqr").innerHTML='<p class="mu">QR Code indisponível (sem internet?). Use o copia e cola.</p>'}return code};
+    $("#pxcc").value=code;try{const q=qrcode(0,"H");q.addData(code);q.make();pixImagem(q,P,c,val(),am,ay).then(b=>{PXIMG=b}).catch(()=>{PXIMG=null});$("#pxqr").innerHTML='<div class="pxqrw">'+q.createSvgTag({cellSize:5,margin:2})+'<img src="logo.png" alt=""></div>'}catch(err){$("#pxqr").innerHTML='<p class="mu">QR Code indisponível (sem internet?). Use o copia e cola.</p>'}return code};
   gerar();$("#pxv").oninput=gerar;$("#pxm").onchange=gerar;$("#pxx").onclick=()=>sh.classList.remove("on");
   $("#pxck").onclick=async()=>{try{await navigator.clipboard.writeText(P.chave||CFG.pix);toast("Chave PIX copiada.")}catch(err){toast(P.chave||CFG.pix)}};
   $("#pxcp").onclick=async()=>{try{await navigator.clipboard.writeText($("#pxcc").value);toast("Código PIX copiado.")}catch(err){$("#pxcc").select();toast("Copie o código selecionado.")}};
-  $("#pxwa").onclick=()=>{const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante.\n\n*Se você já efetuou o pagamento, por favor desconsidere esta mensagem.* Obrigado!`;
-    compartilhar(msg)};
+  $("#pxwa").onclick=()=>{const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.favorecido||P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante.\n\n*Se você já efetuou o pagamento, por favor desconsidere esta mensagem.* Obrigado!`;
+    compartilhar(msg,PXIMG,"PIX "+c.nome+" - "+MESES_N[am]+" "+ay+".png")};
   $("#pxok").onclick=async()=>{const v=val(),[ay,am]=ref();if(!(v>0))return toast("Digite o valor.");
     if(!confirm(`Confirmar que ${c.nome} pagou ${brl(v)} referente a ${MESES_N[am]}/${ay}?`))return;
     $("#pxok").disabled=true;
@@ -361,7 +386,7 @@ async function reciboPdf({n,seg,P,c,valor,am,ay,data,chave}){
   linha("FORMA DE PAGAMENTO","PIX – "+(P.chave||chave)+(P.banco?" ("+P.banco+")":""));
   linha("DATA DO RECEBIMENTO",data.toLocaleDateString("pt-BR"));
   doc.setDrawColor(200,210,225);doc.line(30,yy+14,W-30,yy+14);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(91,107,127);
-  doc.text(P.nome||"Porto Franco Online",W/2,yy+19,{align:"center"});doc.text((CFG.cidade||"Porto Franco")+" — MA",W/2,yy+24,{align:"center"});
+  doc.text(P.favorecido||P.nome||"Porto Franco Online",W/2,yy+19,{align:"center"});doc.text((CFG.cidade||"Porto Franco")+" — MA",W/2,yy+24,{align:"center"});
   doc.setFontSize(7.5);doc.text("Recibo gerado pelo Sistema Porto Franco Online.",W/2,200,{align:"center"});
   return doc.output("blob")}
 
