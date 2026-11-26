@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>/* sempre abrir a versão mais nova */window.PFO_VERSAO="2026-11-26e";
+<script>/* sempre abrir a versão mais nova */window.PFO_VERSAO="2026-11-26f";
 (function(){try{fetch(location.pathname+"?nv="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(h=>{const m=h.match(/PFO_VERSAO="([^"]+)"/);
  if(m&&m[1]!==window.PFO_VERSAO){const u=new URL(location.href);if(u.searchParams.get("v")===m[1])return;u.searchParams.set("v",m[1]);location.replace(u.href)}}).catch(()=>{})}catch(e){}})();</script>
 
@@ -15,7 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="baixar.js"></script>
 <script src="config.js"></script>
-<script src="shim.js"></script>
+<script src="shim.js?v=20261126m"></script>
 <script src="excel.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -371,7 +371,7 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
     try{const s=await PFO.db.doc(mod).get(),d=s.data(),cl=d.clientes||{},cc=cl[id];if(!cc)throw new Error("Cliente não encontrado.");
       cc.p=cc.p||{};const arr=Array.from({length:12},(_,i)=>{const a=cc.p[ay]||[];return a[i]==null?"":a[i]});arr[am]=v;cc.p[ay]=arr;
       const hoje=new Date(),hj=hoje.getFullYear()+"-"+String(hoje.getMonth()+1).padStart(2,"0")+"-"+String(hoje.getDate()).padStart(2,"0");
-      cc.pg=cc.pg||{};cc.pg[ay+"-"+(am+1)]=hj;await PFO.db.doc(mod).update({clientes:cl});
+      cc.pg=cc.pg||{};cc.pg[ay+"-"+(am+1)]=hj;await PFO.db.doc(mod).substituir({clientes:cl});
       const rs=await PFO.db.doc("recibos/main").get(),R=rs.exists?rs.data():{n:0,lista:[]};R.n=(R.n||0)+1;R.lista=(R.lista||[]).concat([{n:R.n,mod:seg,id,nome:cc.nome,valor:v,ref:ay+"-"+(am+1),data:hj}]).slice(-500);
       await PFO.db.doc("recibos/main").set(R);
       const pdf=await reciboPdf({n:R.n,seg,P,c:cc,valor:v,am,ay,data:hoje,chave});

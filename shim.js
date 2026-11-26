@@ -100,7 +100,18 @@
         atualizarTodos(id);
       },
       update: async function (patch) {
-        var r = await client().rpc("doc_merge", { p_id: id, p_patch: patch });
+        /* junta o que mudou com o que já existe (em todos os níveis), sem apagar o resto */
+        var atual = await lerDoc(id);
+        var novo = juntar(atual && atual.data ? atual.data : {}, patch || {});
+        var r = await client().from("app_docs").upsert({ id: id, data: novo, updated_at: new Date().toISOString() });
+        if (r.error) throw new Error(traduzir(r.error));
+        atualizarTodos(id);
+      },
+      /* troca só os campos enviados por inteiro (ex.: a lista toda de clientes), mantendo os outros campos */
+      substituir: async function (campos) {
+        var atual = await lerDoc(id);
+        var novo = Object.assign({}, atual && atual.data ? atual.data : {}, campos || {});
+        var r = await client().from("app_docs").upsert({ id: id, data: novo, updated_at: new Date().toISOString() });
         if (r.error) throw new Error(traduzir(r.error));
         atualizarTodos(id);
       },
@@ -110,6 +121,15 @@
         atualizarTodos(id);
       }
     };
+  }
+  function ehObj(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
+  function juntar(base, patch) {
+    var out = ehObj(base) ? Object.assign({}, base) : {};
+    Object.keys(patch).forEach(function (k) {
+      var v = patch[k];
+      out[k] = (ehObj(v) && ehObj(out[k])) ? juntar(out[k], v) : v;
+    });
+    return out;
   }
   function traduzir(e) {
     var m = (e && (e.message || e.details)) || String(e);
