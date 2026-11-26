@@ -324,7 +324,7 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
   gerar();$("#pxv").oninput=gerar;$("#pxm").onchange=gerar;$("#pxx").onclick=()=>sh.classList.remove("on");
   $("#pxck").onclick=async()=>{try{await navigator.clipboard.writeText(P.chave||CFG.pix);toast("Chave PIX copiada.")}catch(err){toast(P.chave||CFG.pix)}};
   $("#pxcp").onclick=async()=>{try{await navigator.clipboard.writeText($("#pxcc").value);toast("Código PIX copiado.")}catch(err){$("#pxcc").select();toast("Copie o código selecionado.")}};
-  $("#pxwa").onclick=()=>{const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante. Obrigado!`;
+  $("#pxwa").onclick=()=>{const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante.\n\n*Se você já efetuou o pagamento, por favor desconsidere esta mensagem.* Obrigado!`;
     compartilhar(msg)};
   $("#pxok").onclick=async()=>{const v=val(),[ay,am]=ref();if(!(v>0))return toast("Digite o valor.");
     if(!confirm(`Confirmar que ${c.nome} pagou ${brl(v)} referente a ${MESES_N[am]}/${ay}?`))return;
