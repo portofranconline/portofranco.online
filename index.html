@@ -13,6 +13,8 @@
 <script src="config.js"></script>
 <script src="shim.js"></script>
 <script src="excel.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
 :root{--bg:#f2f5fa;--tx:#0b1f3a;--mu:#5b6b7f;--cy:#0b7285;--gr:#12a37a;--rd:#c62828}
 *{box-sizing:border-box}
@@ -62,11 +64,19 @@ details.dv .dl{background:#fff;border:1px solid #eef2f8;border-top:0;padding:4px
 .cbd{color:#12805c;font-style:normal;font-weight:700}
 a.card.fn{display:block;text-decoration:none;color:var(--tx)}.fe{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}.fe div{background:#f2f5fa;border-radius:12px;padding:8px 4px;text-align:center}
 .fe span{font-size:18px}.fe b{display:block;font-size:20px}.fe small{display:block;font-size:10.5px;color:var(--mu);line-height:1.1}
+#pxsheet{position:fixed;inset:0;background:rgba(11,31,58,.55);display:none;align-items:center;z-index:20;padding:10px}#pxsheet.on{display:flex}
+#pxbox{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:520px;margin:auto;max-height:94vh;overflow:auto}
+.pxqr{display:flex;justify-content:center;margin:12px 0}.pxqr svg{width:220px;height:220px}
+.pxb{border:0;border-radius:10px;background:#32bcad;color:#fff;font-weight:800;font-size:12px;padding:7px 9px;cursor:pointer;white-space:nowrap}
+.okbox{background:#dcf5ea;color:#12805c;font-weight:800;border-radius:12px;padding:12px;margin-top:10px}
+details.pxcfg{margin-top:12px;border:1px solid #e6ecf4;border-radius:12px;padding:10px}details.pxcfg summary{font-weight:800;cursor:pointer}.pxseg{margin-top:10px;padding-top:6px;border-top:1px dashed #e6ecf4}
+textarea#pxcc{font:12px ui-monospace,monospace}
 </style>
 </head>
 <body>
 <header><div class="row"><img src="logo.png" alt="Porto Franco Online"><div><h1>Sistema Porto Franco Online</h1><small id="quem">Acesso restrito</small></div></div></header>
 <main id="app"><div class="card mu">Carregando…</div></main>
+<div id="pxsheet"><div id="pxbox"></div></div>
 <div id="toast"></div>
 <script>
 const $=s=>document.querySelector(s);
@@ -126,6 +136,9 @@ function menu(p){
    <a class="mod" href="propostas/online/" target="_blank"><div class="ic">📝</div><div><b>Proposta Porto Franco Online</b><span>Planos de divulgação para enviar ao cliente</span></div><i>›</i></a>
    <a class="mod" href="propostas/painel/" target="_blank"><div class="ic">📄</div><div><b>Proposta Painel de LED</b><span>Proposta do painel para enviar ao cliente</span></div><i>›</i></a>
   </div>
+  <div class="card"><b>💠 Gerar PIX</b><p class="mu">Escolha o cliente: o valor do contrato vem preenchido e pode ser editado.</p>
+   <div class="row2"><select id="pxmod"><option value="online/main">📣 Publicidade</option><option value="painel/main">💡 Painel de LED</option></select><select id="pxcli"><option>Carregando…</option></select></div>
+   <button class="btn" id="pxgo" style="background:#32bcad">💠 Gerar PIX</button></div>
   <div class="card"><b>⬇ Exportar Excel</b><p class="mu">Baixa a sua planilha original, no mesmo formato, com os pagamentos, clientes e despesas atualizados do sistema.</p>
    <div class="row2"><button class="btn g" onclick="PFOX.baixar('online',this)">⬇ Excel Publicidade</button><button class="btn g" onclick="PFOX.baixar('painel',this)">⬇ Excel Painel de LED</button></div></div>
   <div class="card" id="env"><b>📤 Enviar propostas</b><p class="mu">Links abertos: o cliente vê a proposta sem precisar de login.</p>
@@ -138,6 +151,14 @@ function menu(p){
    <label>Avisar "a vencer" com quantos dias de antecedência</label><input id="cdias" type="number" min="1" max="31">
    <label>Mensagem do WhatsApp (os links entram no final)</label><textarea id="cmsg" rows="3"></textarea>
    <label>Chave PIX (entra nas mensagens de cobrança)</label><input id="cpix" placeholder="CNPJ, celular, e-mail ou chave aleatória">
+   <details class="pxcfg"><summary>💠 PIX por segmento (QR Code e recibo)</summary>
+    ${["online","painel"].map(k=>`<div class="pxseg"><b>${k==="online"?"📣 Publicidade (divulgação na página)":"💡 Painel de LED"}</b>
+     <div class="row2"><div><label>Tipo da chave</label><select id="ptp_${k}"><option value="cnpj">CNPJ</option><option value="cpf">CPF</option><option value="cel">Celular</option><option value="email">E-mail</option><option value="aleat">Aleatória</option></select></div>
+     <div><label>Chave PIX</label><input id="pky_${k}" placeholder="em branco = usa a chave acima"></div></div>
+     <label>Nome no QR Code (até 25 letras)</label><input id="pnm_${k}" maxlength="25">
+     <label>Mensagem do PIX (o mês entra no final)</label><input id="pms_${k}" maxlength="40">
+     <label>Título do recibo</label><input id="prc_${k}"></div>`).join("")}
+    <label>Cidade</label><input id="pcid" maxlength="15"></details>
    <label>Cobrança — mensagem para quem está A VENCER</label><textarea id="cmav" rows="4"></textarea>
    <label>Cobrança — mensagem para quem está VENCIDO</label><textarea id="cmve" rows="4"></textarea>
    <p class="mu">Use: {nome} cliente · {responsavel} · {valor} · {vencimento} · {meses} meses em aberto · {pix}</p>
@@ -154,19 +175,21 @@ function menu(p){
     if(b.dataset.cp!=null)copiar(linkDe(LINKS[+b.dataset.cp][1]),"Link copiado.");
     if(b.id==="cpall")copiar(texto(),"Os dois links foram copiados.")};
   trocaSenha();usuarios(p);
-  carregarCfg().then(()=>{$("#cdias").value=CFG.dias;$("#cmsg").value=CFG.msg;$("#cpix").value=CFG.pix;$("#cmav").value=CFG.cobAv;$("#cmve").value=CFG.cobVe;atualizaWa();painelVenc();painelFunil()});
-  $("#csv").onclick=async()=>{CFG.dias=Math.max(1,Math.min(31,parseInt($("#cdias").value)||5));CFG.msg=$("#cmsg").value||CFG_PADRAO.msg;CFG.pix=$("#cpix").value.trim();CFG.cobAv=$("#cmav").value||CFG_PADRAO.cobAv;CFG.cobVe=$("#cmve").value||CFG_PADRAO.cobVe;
+  carregarCfg().then(()=>{$("#cdias").value=CFG.dias;$("#cmsg").value=CFG.msg;$("#cpix").value=CFG.pix;pxCfgPreencher();pxListar();$("#cmav").value=CFG.cobAv;$("#cmve").value=CFG.cobVe;atualizaWa();painelVenc();painelFunil()});
+  $("#csv").onclick=async()=>{CFG.dias=Math.max(1,Math.min(31,parseInt($("#cdias").value)||5));CFG.msg=$("#cmsg").value||CFG_PADRAO.msg;CFG.pix=$("#cpix").value.trim();pxCfgLer();CFG.cobAv=$("#cmav").value||CFG_PADRAO.cobAv;CFG.cobVe=$("#cmve").value||CFG_PADRAO.cobVe;
     try{await PFO.db.doc("config/main").set(CFG);toast("Configurações salvas.");atualizaWa();painelVenc()}catch(e){toast(msgErro(e))}};
   $("#bkp").onclick=async()=>{try{const r=await sb().from("app_docs").select("id,data,updated_at").not("id","like","modelo/%");if(r.error)throw r.error;
     const pac={sistema:"Porto Franco Online",gerado_em:new Date().toISOString(),docs:Object.fromEntries(r.data.map(x=>[x.id,x.data]))};
     const d=new Date().toISOString().slice(0,10);await PFO.downloads.save({filename:"copia-dados-porto-franco-online-"+d+".json",data:new Blob([JSON.stringify(pac,null,1)],{type:"application/json"})});toast("Cópia baixada.")}catch(e){toast(msgErro(e))}}}
 
 /* ---------- configurações ---------- */
-const CFG_PADRAO={dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:",pix:"",
+const CFG_PADRAO={cidade:"PORTO FRANCO",
+  px:{online:{tipo:"cnpj",chave:"",nome:"PORTO FRANCO ONLINE",msg:"Divulgacao @portofranco.online",recibo:"Recibo – Divulgação Porto Franco Online"},
+      painel:{tipo:"cnpj",chave:"",nome:"PAINEL LED PORTO FRANCO",msg:"Publicidade Painel de LED",recibo:"Recibo – Publicidade Painel de LED"}},dias:5,msg:"Olá! Seguem as propostas do Porto Franco Online:",pix:"",
   cobAv:"Olá, {responsavel}! Tudo bem? 😊\nPassando para lembrar que a mensalidade da {nome} com o Porto Franco Online, no valor de {valor}, vence em {vencimento}.\nChave PIX: {pix}\nObrigado pela parceria!",
   cobVe:"Olá, {responsavel}! Tudo bem?\nConsta em aberto a mensalidade da {nome} com o Porto Franco Online ({meses}), total de {valor}.\nChave PIX: {pix}\nSe já pagou, por favor desconsidere e me envie o comprovante. Obrigado!"};
 let CFG={...CFG_PADRAO};
-async function carregarCfg(){try{const s=await PFO.db.doc("config/main").get();if(s.exists)CFG={...CFG_PADRAO,...s.data()}}catch(e){}}
+async function carregarCfg(){try{const s=await PFO.db.doc("config/main").get();if(s.exists){const d=s.data();CFG={...CFG_PADRAO,...d,px:{online:{...CFG_PADRAO.px.online,...((d.px||{}).online||{})},painel:{...CFG_PADRAO.px.painel,...((d.px||{}).painel||{})}}}}}catch(e){}}
 
 /* ---------- vencimentos (mesma regra da aba Vencimentos dos módulos) ---------- */
 const brl=v=>"R$ "+(Math.round(v*100)/100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -215,7 +238,7 @@ let COBLOG={},RES=[];
 const chaveCob=(r,x,tipo)=>r.m[2].split("/")[0]+":"+x.id+":"+tipo+":"+x.data.toISOString().slice(0,7);
 function linhaCob(r,x,tipo,info){const k=chaveCob(r,x,tipo),qd=COBLOG[k];
   return `<div class="vl"><span>${esc(x.nome)}<small>${esc(info)}${qd?` · <em class="cbd">✔ cobrado ${new Date(qd).toLocaleDateString("pt-BR")}</em>`:""}</small></span>
-   <span class="vr"><b>${brl(x.valor)}</b><button class="cob" data-mod="${r.m[2]}" data-id="${esc(x.id)}" data-t="${tipo}" title="Cobrar pelo WhatsApp">💬 Cobrar</button></span></div>`}
+   <span class="vr"><b>${brl(x.valor)}</b><button class="cob" data-mod="${r.m[2]}" data-id="${esc(x.id)}" data-t="${tipo}" title="Cobrar pelo WhatsApp">💬 Cobrar</button><button class="pxb" data-mod="${r.m[2]}" data-id="${esc(x.id)}" data-m="${(x.mm&&x.mm.length?x.mm[0]:x.data.getMonth())}" data-y="${x.data.getFullYear()}" title="Gerar PIX">💠 PIX</button></span></div>`}
 function telefone(t){let d=String(t||"").replace(/\D/g,"");if(!d)return"";if(d.length<=11)d="55"+d.replace(/^0+/,"");return d.length>=12?d:""}
 function mensagemCob(x,tipo){const c=x.c||{};const tpl=tipo==="ve"?CFG.cobVe:CFG.cobAv;
   return tpl.replace(/\{nome\}/g,c.nome||"").replace(/\{responsavel\}/g,(c.resp||"").trim()||"tudo bem").replace(/\{valor\}/g,brl(x.valor))
@@ -241,6 +264,94 @@ async function painelFunil(){const box=$("#funilres");if(!box)return;
      <div class="fe">${ETAPAS.map(e=>`<div><span>${e[2]}</span><b>${n(e[0])}</b><small>${e[1]}</small></div>`).join("")}</div>
      <div class="mu">💰 Em negociação: <b>${brl(neg)}</b>${atras?` · ⏰ <b style="color:#b3261e">${atras} retorno${atras>1?"s":""} para hoje</b>`:""}</div></a>`}catch(e){box.innerHTML=""}}
 function trocaSenha(){$("#tsn").onclick=async()=>{const v=$("#ns").value;if(v.length<6)return toast("Use pelo menos 6 caracteres.");const r=await sb().auth.updateUser({password:v});toast(r.error?msgErro(r.error):"Senha alterada.");$("#ns").value=""}}
+
+/* ---------- PIX (BR Code) + recibo ---------- */
+const MESES_N=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const semAcento=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 @.\-/]/g,"").trim();
+function crc16(t){let c=0xFFFF;for(let i=0;i<t.length;i++){c^=t.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}return c.toString(16).toUpperCase().padStart(4,"0")}
+const tlv=(id,v)=>id+String(v.length).padStart(2,"0")+v;
+function chavePix(tipo,ch){ch=String(ch||"").trim();
+  if(tipo==="cel"){let d=ch.replace(/\D/g,"");if(d.length<=11)d="55"+d;return "+"+d}
+  if(tipo==="cpf"||tipo==="cnpj")return ch.replace(/\D/g,"");
+  if(tipo==="email")return ch.toLowerCase();return ch}
+function brcode({chave,nome,cidade,valor,msg,txid}){
+  const ma=tlv("00","br.gov.bcb.pix")+tlv("01",chave)+(msg?tlv("02",semAcento(msg).slice(0,Math.max(0,72-chave.length))):"");
+  let p=tlv("00","01")+tlv("26",ma)+tlv("52","0000")+tlv("53","986")+(valor>0?tlv("54",valor.toFixed(2)):"")+tlv("58","BR")+
+    tlv("59",semAcento(nome).toUpperCase().slice(0,25)||"RECEBEDOR")+tlv("60",semAcento(cidade).toUpperCase().slice(0,15)||"BRASIL")+tlv("62",tlv("05",(txid||"***").replace(/[^A-Za-z0-9]/g,"").slice(0,25)||"***"))+"6304";
+  return p+crc16(p)}
+function pxCfgPreencher(){for(const k of["online","painel"]){const c=CFG.px[k];$("#ptp_"+k).value=c.tipo;$("#pky_"+k).value=c.chave;$("#pnm_"+k).value=c.nome;$("#pms_"+k).value=c.msg;$("#prc_"+k).value=c.recibo}$("#pcid").value=CFG.cidade}
+function pxCfgLer(){for(const k of["online","painel"])CFG.px[k]={tipo:$("#ptp_"+k).value,chave:$("#pky_"+k).value.trim(),nome:$("#pnm_"+k).value.trim()||CFG_PADRAO.px[k].nome,msg:$("#pms_"+k).value.trim(),recibo:$("#prc_"+k).value.trim()||CFG_PADRAO.px[k].recibo};CFG.cidade=$("#pcid").value.trim()||"PORTO FRANCO"}
+let PXDOCS={};
+async function pxListar(){const mod=$("#pxmod").value;try{const s=await PFO.db.doc(mod).get();PXDOCS[mod]=s.exists?s.data():{clientes:{}};
+  const cl=Object.entries(PXDOCS[mod].clientes||{}).filter(([i,c])=>c.status==="ATIVO"||c.status==="NEGATIVO").sort((a,b)=>(a[1].nome||"").localeCompare(b[1].nome||""));
+  $("#pxcli").innerHTML=cl.map(([i,c])=>`<option value="${esc(i)}">${esc(c.nome)} · ${brl(c.valor||0)}</option>`).join("")||"<option value=''>Nenhum cliente ativo</option>"}catch(e){}}
+document.addEventListener("change",e=>{if(e.target.id==="pxmod")pxListar()});
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.id==="pxgo"){const mod=$("#pxmod").value,id=$("#pxcli").value;if(!id)return;const c=PXDOCS[mod].clientes[id],y=new Date().getFullYear(),a=(c.p&&c.p[y])||[];
+    let m=new Date().getMonth();for(let i=0;i<12;i++)if(a[i]==null||a[i]===""){m=i;break}return abrirPix(mod,id,c,y,m)}
+  if(b.classList.contains("pxb")){const r=RES.find(z=>z.m[2]===b.dataset.mod),x=r&&[...r.a.venc,...r.a.avenc].find(z=>String(z.id)===b.dataset.id);if(x)abrirPix(b.dataset.mod,x.id,x.c,+b.dataset.y,+b.dataset.m)}});
+function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=chavePix(P.chave?P.tipo:"cnpj",P.chave||CFG.pix);
+  if(!(P.chave||CFG.pix))return toast("Cadastre a chave PIX em ⚙️ Configurações.");
+  if(!P.chave&&CFG.pix){P.tipo=/@/.test(CFG.pix)?"email":/^[0-9a-f]{8}-/i.test(CFG.pix)?"aleat":CFG.pix.replace(/\D/g,"").length===14?"cnpj":CFG.pix.replace(/\D/g,"").length===11?"cpf":"cel"}
+  const chave=chavePix(P.tipo,P.chave||CFG.pix);
+  const sh=$("#pxsheet");sh.classList.add("on");
+  const anos=[y-1,y,y+1];
+  $("#pxbox").innerHTML=`<div class="vh"><b>💠 PIX · ${esc(c.nome)}</b><button class="btn g" id="pxx" style="width:auto;margin:0;padding:8px 12px">✕</button></div>
+   <p class="mu">${seg==="online"?"📣 Publicidade":"💡 Painel de LED"} · chave ${esc(chave)}</p>
+   <div class="row2"><div><label>Valor (R$)</label><input id="pxv" inputmode="decimal" value="${String((+c.valor||0).toFixed(2)).replace(".",",")}"></div>
+   <div><label>Mês de referência</label><select id="pxm">${anos.map(a=>MESES_N.map((n,i)=>`<option value="${a}-${i}" ${a===y&&i===m?"selected":""}>${n}/${a}</option>`).join("")).join("")}</select></div></div>
+   <div id="pxqr" class="pxqr"></div>
+   <label>PIX copia e cola</label><textarea id="pxcc" rows="3" readonly></textarea>
+   <div class="row2"><button class="btn g" id="pxcp">📋 Copiar código</button><button class="btn" id="pxwa" style="background:#25d366">💬 Enviar no WhatsApp</button></div>
+   <hr style="border:0;border-top:1px solid #e6ecf4;margin:14px 0 4px">
+   <p class="mu">Quando o dinheiro cair na conta:</p>
+   <button class="btn" id="pxok" style="background:#12805c">✅ Confirmar recebimento e gerar recibo</button>
+   <div id="pxfim"></div>`;
+  const val=()=>parseFloat(String($("#pxv").value).replace(/\./g,"").replace(",","."))||0,ref=()=>$("#pxm").value.split("-").map(Number);
+  const gerar=()=>{const [ay,am]=ref(),txid=(seg==="online"?"PFO":"LED")+id+"M"+(am+1)+"A"+String(ay).slice(2);
+    const code=brcode({chave,nome:P.nome,cidade:CFG.cidade,valor:val(),msg:(P.msg?P.msg+" ":"")+MESES_N[am].slice(0,3)+"/"+ay,txid});
+    $("#pxcc").value=code;try{const q=qrcode(0,"M");q.addData(code);q.make();$("#pxqr").innerHTML=q.createSvgTag({cellSize:5,margin:2})}catch(err){$("#pxqr").innerHTML='<p class="mu">QR Code indisponível (sem internet?). Use o copia e cola.</p>'}return code};
+  gerar();$("#pxv").oninput=gerar;$("#pxm").onchange=gerar;$("#pxx").onclick=()=>sh.classList.remove("on");
+  $("#pxcp").onclick=async()=>{try{await navigator.clipboard.writeText($("#pxcc").value);toast("Código PIX copiado.")}catch(err){$("#pxcc").select();toast("Copie o código selecionado.")}};
+  $("#pxwa").onclick=()=>{let f=telefone(c.tel);if(!f){const t=prompt("WhatsApp de "+c.nome+" (com DDD):");if(!t)return;f=telefone(t);if(!f)return toast("Número inválido.")}
+    const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nPIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante. Obrigado!`;
+    window.open("https://api.whatsapp.com/send?phone="+f+"&text="+encodeURIComponent(msg),"_blank")};
+  $("#pxok").onclick=async()=>{const v=val(),[ay,am]=ref();if(!(v>0))return toast("Digite o valor.");
+    if(!confirm(`Confirmar que ${c.nome} pagou ${brl(v)} referente a ${MESES_N[am]}/${ay}?`))return;
+    $("#pxok").disabled=true;
+    try{const s=await PFO.db.doc(mod).get(),d=s.data(),cl=d.clientes||{},cc=cl[id];if(!cc)throw new Error("Cliente não encontrado.");
+      cc.p=cc.p||{};const arr=Array.from({length:12},(_,i)=>{const a=cc.p[ay]||[];return a[i]==null?"":a[i]});arr[am]=v;cc.p[ay]=arr;
+      const hoje=new Date(),hj=hoje.getFullYear()+"-"+String(hoje.getMonth()+1).padStart(2,"0")+"-"+String(hoje.getDate()).padStart(2,"0");
+      cc.pg=cc.pg||{};cc.pg[ay+"-"+(am+1)]=hj;await PFO.db.doc(mod).update({clientes:cl});
+      const rs=await PFO.db.doc("recibos/main").get(),R=rs.exists?rs.data():{n:0,lista:[]};R.n=(R.n||0)+1;R.lista=(R.lista||[]).concat([{n:R.n,mod:seg,id,nome:cc.nome,valor:v,ref:ay+"-"+(am+1),data:hj}]).slice(-500);
+      await PFO.db.doc("recibos/main").set(R);
+      const pdf=await reciboPdf({n:R.n,seg,P,c:cc,valor:v,am,ay,data:hoje,chave});
+      const nomeArq="Recibo "+String(R.n).padStart(4,"0")+" - "+cc.nome+" - "+MESES_N[am]+" "+ay+".pdf";
+      $("#pxfim").innerHTML=`<div class="okbox">✅ Pagamento lançado em ${MESES_N[am]}/${ay} e recibo nº ${String(R.n).padStart(4,"0")} gerado.</div>
+        <div class="row2"><button class="btn g" id="pxrb">📄 Baixar / enviar recibo</button><button class="btn" id="pxrw" style="background:#25d366">💬 Avisar cliente</button></div>`;
+      $("#pxrb").onclick=()=>PFO_SALVAR(pdf,nomeArq);
+      $("#pxrw").onclick=()=>{let f=telefone(cc.tel);if(!f){const t=prompt("WhatsApp de "+cc.nome+" (com DDD):");if(!t)return;f=telefone(t)}if(!f)return;
+        window.open("https://api.whatsapp.com/send?phone="+f+"&text="+encodeURIComponent(`Olá${cc.resp?", "+cc.resp.split(" ")[0]:""}! Recebemos o seu pagamento de ${brl(v)} referente a ${MESES_N[am].toLowerCase()}/${ay}. Obrigado! Segue o recibo.`),"_blank")};
+      toast("Pagamento confirmado.");painelVenc()}
+    catch(err){toast(msgErro(err));$("#pxok").disabled=false}}}
+async function reciboPdf({n,seg,P,c,valor,am,ay,data,chave}){
+  const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a5"}),W=148;
+  doc.setFillColor(11,31,58);doc.rect(0,0,W,30,"F");
+  try{const img=await fetch("logo.png").then(r=>r.blob()).then(b=>new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(b)}));doc.setFillColor(255,255,255);doc.roundedRect(8,6,30,19,3,3,"F");doc.addImage(img,"PNG",10,7.5,26,17)}catch(e){}
+  doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(13);doc.text(P.recibo,44,15,{maxWidth:W-50});
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.text("Nº "+String(n).padStart(4,"0")+"  ·  "+data.toLocaleDateString("pt-BR"),44,23);
+  doc.setTextColor(11,31,58);let yy=44;
+  const linha=(r,v)=>{doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(91,107,127);doc.text(r,12,yy);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.setTextColor(11,31,58);doc.text(String(v),12,yy+6,{maxWidth:W-24});yy+=15};
+  linha("RECEBEMOS DE",c.nome+(c.resp?" — "+c.resp:""));
+  linha("VALOR",brl(valor));
+  linha("REFERENTE A",(seg==="online"?"Divulgação na página @portofranco.online":"Publicidade no Painel de LED")+" — "+MESES_N[am]+"/"+ay);
+  linha("FORMA DE PAGAMENTO","PIX ("+chave+")");
+  linha("DATA DO RECEBIMENTO",data.toLocaleDateString("pt-BR"));
+  doc.setDrawColor(200,210,225);doc.line(30,yy+14,W-30,yy+14);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(91,107,127);
+  doc.text(P.nome||"Porto Franco Online",W/2,yy+19,{align:"center"});doc.text((CFG.cidade||"Porto Franco")+" — MA",W/2,yy+24,{align:"center"});
+  doc.setFontSize(7.5);doc.text("Recibo gerado pelo Sistema Porto Franco Online.",W/2,200,{align:"center"});
+  return doc.output("blob")}
 
 async function usuarios(eu){
   const r=await sb().from("perfis").select("login,papel,criado_em").order("login");
