@@ -242,18 +242,17 @@ function linhaCob(r,x,tipo,info){const k=chaveCob(r,x,tipo),qd=COBLOG[k];
   return `<div class="vl"><span>${esc(x.nome)}<small>${esc(info)}${qd?` · <em class="cbd">✔ cobrado ${new Date(qd).toLocaleDateString("pt-BR")}</em>`:""}</small></span>
    <span class="vr"><b>${brl(x.valor)}</b><button class="cob" data-mod="${r.m[2]}" data-id="${esc(x.id)}" data-t="${tipo}" title="Cobrar pelo WhatsApp">💬 Cobrar</button><button class="pxb" data-mod="${r.m[2]}" data-id="${esc(x.id)}" data-m="${(x.mm&&x.mm.length?x.mm[0]:x.data.getMonth())}" data-y="${x.data.getFullYear()}" title="Gerar PIX">💠 PIX</button></span></div>`}
 function telefone(t){let d=String(t||"").replace(/\D/g,"");if(!d)return"";if(d.length<=11)d="55"+d.replace(/^0+/,"");return d.length>=12?d:""}
-function mensagemCob(x,tipo){const c=x.c||{};const tpl=tipo==="ve"?CFG.cobVe:CFG.cobAv;
+function mensagemCob(x,tipo,mod){const P=(CFG.px||{})[String(mod||"").split("/")[0]]||{},pix=P.chave?P.chave+(P.banco?" ("+P.banco+")":""):CFG.pix;const c=x.c||{};const tpl=tipo==="ve"?CFG.cobVe:CFG.cobAv;
   return tpl.replace(/\{nome\}/g,c.nome||"").replace(/\{responsavel\}/g,(c.resp||"").trim()||"tudo bem").replace(/\{valor\}/g,brl(x.valor))
-   .replace(/\{vencimento\}/g,x.data.toLocaleDateString("pt-BR")).replace(/\{meses\}/g,(x.meses&&x.meses.length?x.meses.join(", "):"em aberto")).replace(/\{pix\}/g,CFG.pix||"(peça a chave PIX)")
-   .replace(/Olá, tudo bem! Tudo bem\?/,"Olá! Tudo bem?")}
+   .replace(/\{vencimento\}/g,x.data.toLocaleDateString("pt-BR")).replace(/\{meses\}/g,(x.meses&&x.meses.length?x.meses.join(", "):"em aberto")).replace(/\{pix\}/g,pix||"(peça a chave PIX)")
+   .replace(/Olá, tudo bem! Tudo bem\?/,"Olá! Tudo bem?")
+   .replace(/com o Porto Franco Online/g,String(mod||"").startsWith("painel")?"no Painel de LED":"com o Porto Franco Online")
+   .replace(/\{servico\}/g,String(mod||"").startsWith("painel")?"Painel de LED":"Porto Franco Online")}
 document.addEventListener("click",async ev=>{const b=ev.target.closest("button.cob");if(!b)return;ev.preventDefault();
   const r=RES.find(z=>z.m[2]===b.dataset.mod);if(!r)return;const lista=b.dataset.t==="ve"?r.a.venc:r.a.avenc,x=lista.find(z=>String(z.id)===b.dataset.id);if(!x)return;
-  let fone=telefone(x.c.tel),novo=false;
-  if(!fone){const t=prompt("Sem telefone cadastrado para "+x.nome+".\nDigite o WhatsApp com DDD (ex.: 99 98111-2222):");if(!t)return;fone=telefone(t);if(!fone)return toast("Número inválido.");novo=t}
-  window.open("https://api.whatsapp.com/send?phone="+fone+"&text="+encodeURIComponent(mensagemCob(x,b.dataset.t)),"_blank");
+  if(!(await compartilhar(mensagemCob(x,b.dataset.t,b.dataset.mod))))return;
   const k=chaveCob(r,x,b.dataset.t);COBLOG[k]=new Date().toISOString();
-  try{await PFO.db.doc("cobrancas/main").set(COBLOG);
-    if(novo){const s=await PFO.db.doc(b.dataset.mod).get(),d=s.data(),cl=d.clientes||{};if(cl[x.id]){cl[x.id].tel=novo;await PFO.db.doc(b.dataset.mod).update({clientes:cl});toast("Telefone salvo no cadastro.")}}}catch(e){toast(msgErro(e))}
+  try{await PFO.db.doc("cobrancas/main").set(COBLOG)}catch(e){toast(msgErro(e))}
   painelVenc()});
 
 /* ---------- funil (resumo na tela inicial) ---------- */
@@ -268,6 +267,12 @@ async function painelFunil(){const box=$("#funilres");if(!box)return;
 function trocaSenha(){$("#tsn").onclick=async()=>{const v=$("#ns").value;if(v.length<6)return toast("Use pelo menos 6 caracteres.");const r=await sb().auth.updateUser({password:v});toast(r.error?msgErro(r.error):"Senha alterada.");$("#ns").value=""}}
 
 /* ---------- PIX (BR Code) + recibo ---------- */
+async function compartilhar(texto,blob,nome){
+  if(navigator.share){const d={text:texto};
+    if(blob){const f=new File([blob],nome,{type:blob.type||"application/pdf"});if(navigator.canShare&&navigator.canShare({files:[f]}))d.files=[f]}
+    try{await navigator.share(d);return true}catch(e){if(e&&e.name==="AbortError")return false}}
+  if(blob)PFO_SALVAR(blob,nome);
+  window.open("https://api.whatsapp.com/send?text="+encodeURIComponent(texto),"_blank");return true}
 const TIPOS_PIX={cnpj:"CNPJ",cpf:"CPF",cel:"Celular",email:"E-mail",aleat:"Aleatória"};
 const MESES_N=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const semAcento=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 @.\-/]/g,"").trim();
@@ -307,7 +312,7 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
    <div id="pxqr" class="pxqr"></div>
    <div class="pxkey"><div><small>Chave PIX (${TIPOS_PIX[P.tipo]||"chave"})</small><b>${esc(P.chave||CFG.pix)}</b><small>${esc(P.banco||"")}${P.banco?" · ":""}${esc(P.nome)}</small></div><button class="btn g" id="pxck">📋 Copiar chave</button></div>
    <label>PIX copia e cola</label><textarea id="pxcc" rows="3" readonly></textarea>
-   <div class="row2"><button class="btn g" id="pxcp">📋 Copiar código</button><button class="btn" id="pxwa" style="background:#25d366">💬 Enviar no WhatsApp</button></div>
+   <div class="row2"><button class="btn g" id="pxcp">📋 Copiar código</button><button class="btn" id="pxwa" style="background:#25d366">📤 Compartilhar</button></div>
    <hr style="border:0;border-top:1px solid #e6ecf4;margin:14px 0 4px">
    <p class="mu">Quando o dinheiro cair na conta:</p>
    <button class="btn" id="pxok" style="background:#12805c">✅ Confirmar recebimento e gerar recibo</button>
@@ -319,9 +324,8 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
   gerar();$("#pxv").oninput=gerar;$("#pxm").onchange=gerar;$("#pxx").onclick=()=>sh.classList.remove("on");
   $("#pxck").onclick=async()=>{try{await navigator.clipboard.writeText(P.chave||CFG.pix);toast("Chave PIX copiada.")}catch(err){toast(P.chave||CFG.pix)}};
   $("#pxcp").onclick=async()=>{try{await navigator.clipboard.writeText($("#pxcc").value);toast("Código PIX copiado.")}catch(err){$("#pxcc").select();toast("Copie o código selecionado.")}};
-  $("#pxwa").onclick=()=>{let f=telefone(c.tel);if(!f){const t=prompt("WhatsApp de "+c.nome+" (com DDD):");if(!t)return;f=telefone(t);if(!f)return toast("Número inválido.")}
-    const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante. Obrigado!`;
-    window.open("https://api.whatsapp.com/send?phone="+f+"&text="+encodeURIComponent(msg),"_blank")};
+  $("#pxwa").onclick=()=>{const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante. Obrigado!`;
+    compartilhar(msg)};
   $("#pxok").onclick=async()=>{const v=val(),[ay,am]=ref();if(!(v>0))return toast("Digite o valor.");
     if(!confirm(`Confirmar que ${c.nome} pagou ${brl(v)} referente a ${MESES_N[am]}/${ay}?`))return;
     $("#pxok").disabled=true;
@@ -334,10 +338,9 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
       const pdf=await reciboPdf({n:R.n,seg,P,c:cc,valor:v,am,ay,data:hoje,chave});
       const nomeArq="Recibo "+String(R.n).padStart(4,"0")+" - "+cc.nome+" - "+MESES_N[am]+" "+ay+".pdf";
       $("#pxfim").innerHTML=`<div class="okbox">✅ Pagamento lançado em ${MESES_N[am]}/${ay} e recibo nº ${String(R.n).padStart(4,"0")} gerado.</div>
-        <div class="row2"><button class="btn g" id="pxrb">📄 Baixar / enviar recibo</button><button class="btn" id="pxrw" style="background:#25d366">💬 Avisar cliente</button></div>`;
+        <div class="row2"><button class="btn g" id="pxrb">📄 Baixar recibo</button><button class="btn" id="pxrw" style="background:#25d366">📤 Compartilhar recibo</button></div>`;
       $("#pxrb").onclick=()=>PFO_SALVAR(pdf,nomeArq);
-      $("#pxrw").onclick=()=>{let f=telefone(cc.tel);if(!f){const t=prompt("WhatsApp de "+cc.nome+" (com DDD):");if(!t)return;f=telefone(t)}if(!f)return;
-        window.open("https://api.whatsapp.com/send?phone="+f+"&text="+encodeURIComponent(`Olá${cc.resp?", "+cc.resp.split(" ")[0]:""}! Recebemos o seu pagamento de ${brl(v)} referente a ${MESES_N[am].toLowerCase()}/${ay}. Obrigado! Segue o recibo.`),"_blank")};
+      $("#pxrw").onclick=()=>compartilhar(`Olá${cc.resp?", "+cc.resp.split(" ")[0]:""}! Recebemos o seu pagamento de ${brl(v)} referente a ${MESES_N[am].toLowerCase()}/${ay}. Obrigado! Segue o recibo.`,pdf,nomeArq);
       toast("Pagamento confirmado.");painelVenc()}
     catch(err){toast(msgErro(err));$("#pxok").disabled=false}}}
 async function reciboPdf({n,seg,P,c,valor,am,ay,data,chave}){
