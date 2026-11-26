@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<script>/* sempre abrir a versão mais nova */window.PFO_VERSAO="2026-11-26d";
+<script>/* sempre abrir a versão mais nova */window.PFO_VERSAO="2026-11-26e";
 (function(){try{fetch(location.pathname+"?nv="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(h=>{const m=h.match(/PFO_VERSAO="([^"]+)"/);
  if(m&&m[1]!==window.PFO_VERSAO){const u=new URL(location.href);if(u.searchParams.get("v")===m[1])return;u.searchParams.set("v",m[1]);location.replace(u.href)}}).catch(()=>{})}catch(e){}})();</script>
 
@@ -344,6 +344,8 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
    <label>PIX copia e cola</label><textarea id="pxcc" rows="3" readonly></textarea>
    <div class="row2"><button class="btn g" id="pxcp">📋 Copiar código</button><button class="btn" id="pxwa" style="background:#25d366">📤 1. Compartilhar QR Code</button></div>
    <button class="btn" id="pxsk" style="background:#25d366;margin-top:8px">🔑 2. Compartilhar só a chave</button>
+   <p class="mu" style="text-align:center;margin:10px 0 0">— ou —</p>
+   <button class="btn" id="pxln" style="background:#0b1f3a;margin-top:6px">🔗 Enviar link de pagamento (cliente escolhe QR Code ou chave)</button>
    <hr style="border:0;border-top:1px solid #e6ecf4;margin:14px 0 4px">
    <p class="mu">Quando o dinheiro cair na conta:</p>
    <button class="btn" id="pxok" style="background:#12805c">✅ Confirmar recebimento e gerar recibo</button>
@@ -358,6 +360,11 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
   $("#pxwa").onclick=()=>{const [ay,am]=ref(),msg=`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o PIX da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${P.recibo.replace(/^Recibo\s*–\s*/,"")}), no valor de ${brl(val())}.\n\nChave PIX (${TIPOS_PIX[P.tipo]||"chave"}): ${P.chave||CFG.pix}${P.banco?" – "+P.banco:""}\nFavorecido: ${P.favorecido||P.nome}\n\nOu use o PIX copia e cola:\n${$("#pxcc").value}\n\nAssim que pagar, me envie o comprovante.\n\n*Se você já efetuou o pagamento, por favor desconsidere esta mensagem.* Obrigado!`;
     compartilhar(msg,PXIMG,"PIX "+c.nome+" - "+MESES_N[am]+" "+ay+".png").then(ok=>{if(ok){const k=$("#pxsk");k.classList.add("pisca");setTimeout(()=>k.classList.remove("pisca"),4000)}})};
   $("#pxsk").onclick=()=>compartilhar(P.chave||CFG.pix);
+  $("#pxln").onclick=()=>{const [ay,am]=ref(),txid=(seg==="online"?"PFO":"LED")+id+"M"+(am+1)+"A"+String(ay).slice(2);
+    const dados={n:c.nome,v:+val().toFixed(2),m:am,y:ay,k:P.chave||CFG.pix,t:P.tipo,b:P.banco||"",f:P.favorecido||P.nome,q:P.nome,c:CFG.cidade,x:(P.msg?P.msg+" ":"")+MESES_N[am].slice(0,3)+"/"+ay,i:txid,r:P.recibo.replace(/^Recibo\s*–\s*/,"")};
+    const b64=btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(dados)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+    const link=new URL("pagar/?d="+b64,PFO.base).href;
+    compartilhar(`Olá${c.resp?", "+c.resp.split(" ")[0]:""}! Segue o link para pagamento da mensalidade de ${MESES_N[am].toLowerCase()}/${ay} (${dados.r}), no valor de ${brl(val())}.\n\nAbra o link e escolha pagar por QR Code ou chave PIX:\n${link}\n\n*Se você já efetuou o pagamento, por favor desconsidere esta mensagem.* Obrigado!`)};
   $("#pxok").onclick=async()=>{const v=val(),[ay,am]=ref();if(!(v>0))return toast("Digite o valor.");
     if(!confirm(`Confirmar que ${c.nome} pagou ${brl(v)} referente a ${MESES_N[am]}/${ay}?`))return;
     $("#pxok").disabled=true;

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Pagamento via PIX · Porto Franco Online</title>
+<link rel="icon" href="../logo.png">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#eef2f8;color:#0b1f3a}
+.top{background:#0b1f3a;color:#fff;padding:22px 18px 60px;text-align:center}
+.top img{width:120px;background:#fff;border-radius:14px;padding:8px 10px}
+.top h1{font-size:20px;margin:12px 0 2px}.top p{margin:0;opacity:.8;font-size:14px}
+main{max-width:460px;margin:-44px auto 30px;padding:0 14px}
+.card{background:#fff;border-radius:18px;padding:18px;box-shadow:0 6px 24px rgba(11,31,58,.10);margin-bottom:14px}
+.cli{text-align:center}.cli b{display:block;font-size:19px}.cli .v{font-size:38px;font-weight:900;color:#12805c;margin:6px 0 2px}.cli small{color:#5b6b7f}
+h2{font-size:16px;margin:0 0 12px;text-align:center}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{border:2px solid #dbe4f0;background:#f7f9fc;border-radius:16px;padding:16px 8px;font:inherit;font-weight:800;font-size:15px;color:#0b1f3a;cursor:pointer}
+.opt span{display:block;font-size:30px;margin-bottom:6px}
+.opt.on{border-color:#32bcad;background:#e6f7f5}
+.qrw{position:relative;width:250px;height:250px;margin:6px auto 12px}.qrw svg{width:250px;height:250px;display:block}
+.qrw img{position:absolute;left:50%;top:50%;width:64px;height:64px;object-fit:contain;transform:translate(-50%,-50%);background:#fff;border-radius:12px;padding:4px;box-shadow:0 0 0 3px #fff}
+label{display:block;font-size:12px;font-weight:700;color:#5b6b7f;margin:10px 0 4px}
+textarea{width:100%;border:1px solid #dbe4f0;border-radius:12px;padding:10px;font:12px ui-monospace,monospace;resize:none;background:#f7f9fc}
+.chave{font-size:20px;font-weight:900;text-align:center;word-break:break-all;background:#f7f9fc;border:1px dashed #9fb3cc;border-radius:12px;padding:14px;margin:4px 0}
+.info{font-size:14px;color:#5b6b7f;text-align:center;line-height:1.5}.info b{color:#0b1f3a}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:15px;font:inherit;font-weight:800;font-size:16px;color:#fff;background:#32bcad;margin-top:12px;cursor:pointer}
+.passos{font-size:13px;color:#5b6b7f;margin:12px 0 0;padding-left:18px;line-height:1.6}
+.aviso{font-size:13px;color:#5b6b7f;text-align:center;margin-top:4px}
+.erro{text-align:center;padding:30px 10px;color:#5b6b7f}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0b1f3a;color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+#toast.on{opacity:1}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="top"><img src="../logo.png" alt="Porto Franco Online"><h1>Pagamento via PIX</h1><p id="serv"></p></div>
+<main id="app">
+ <div class="card erro" id="erro" hidden>Link de pagamento inválido.<br>Peça um novo link a quem enviou.</div>
+ <div id="ok" hidden>
+  <div class="card cli"><b id="cli"></b><div class="v" id="val"></div><small id="ref"></small></div>
+  <div class="card"><h2>Como você prefere pagar?</h2>
+   <div class="opts"><button class="opt" data-o="qr"><span>📷</span>QR Code</button><button class="opt" data-o="chave"><span>🔑</span>Chave PIX</button></div></div>
+  <div class="card" id="pqr" hidden>
+   <h2>Pagar com QR Code</h2>
+   <div class="qrw" id="qr"></div>
+   <ol class="passos"><li>Abra o app do seu banco › <b>PIX</b> › <b>Ler QR Code</b>.</li><li>Se estiver pagando pelo mesmo celular, use o <b>Copia e Cola</b> abaixo.</li></ol>
+   <label>PIX Copia e Cola</label><textarea id="cc" rows="4" readonly></textarea>
+   <button class="btn" id="bcc">📋 Copiar código PIX</button>
+  </div>
+  <div class="card" id="pch" hidden>
+   <h2>Pagar com a chave PIX</h2>
+   <label id="tch">Chave PIX</label><div class="chave" id="ch"></div>
+   <div class="info" id="fav"></div>
+   <button class="btn" id="bch">📋 Copiar chave PIX</button>
+   <ol class="passos"><li>Abra o app do seu banco › <b>PIX</b> › <b>Pagar com chave</b>.</li><li>Cole a chave, digite o valor de <b id="val2"></b> e confira o favorecido.</li></ol>
+  </div>
+  <p class="aviso">Depois de pagar, envie o comprovante para quem mandou este link.<br>Se você já efetuou o pagamento, desconsidere.</p>
+ </div>
+</main>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const TIPOS={cnpj:"CNPJ",cpf:"CPF",cel:"Celular",email:"E-mail",aleat:"Aleatória"};
+const brl=v=>(+v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+const semAcento=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 @.\-/]/g,"").trim();
+function crc16(t){let c=0xFFFF;for(let i=0;i<t.length;i++){c^=t.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=(c&0x8000)?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}return c.toString(16).toUpperCase().padStart(4,"0")}
+const tlv=(id,v)=>id+String(v.length).padStart(2,"0")+v;
+function chavePix(tipo,ch){ch=String(ch||"").trim();
+  if(tipo==="cel"){let d=ch.replace(/\D/g,"");if(d.length<=11)d="55"+d;return "+"+d}
+  if(tipo==="cpf"||tipo==="cnpj")return ch.replace(/\D/g,"");
+  if(tipo==="email")return ch.toLowerCase();return ch}
+function brcode({chave,nome,cidade,valor,msg,txid}){
+  const ma=tlv("00","br.gov.bcb.pix")+tlv("01",chave)+(msg?tlv("02",semAcento(msg).slice(0,Math.max(0,72-chave.length))):"");
+  let p=tlv("00","01")+tlv("26",ma)+tlv("52","0000")+tlv("53","986")+(valor>0?tlv("54",valor.toFixed(2)):"")+tlv("58","BR")+
+    tlv("59",semAcento(nome).toUpperCase().slice(0,25)||"RECEBEDOR")+tlv("60",semAcento(cidade).toUpperCase().slice(0,15)||"BRASIL")+tlv("62",tlv("05",(txid||"***").replace(/[^A-Za-z0-9]/g,"").slice(0,25)||"***"))+"6304";
+  return p+crc16(p)}
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2200)}
+async function copiar(t,m){try{await navigator.clipboard.writeText(t);toast(m)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");toast(m)}catch(e2){prompt("Copie:",t)}a.remove()}}
+let D=null;
+try{let b=new URLSearchParams(location.search).get("d")||"";b=b.replace(/-/g,"+").replace(/_/g,"/");while(b.length%4)b+="=";
+  D=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b),c=>c.charCodeAt(0))));if(!D||!D.k||!(D.v>0))D=null}catch(e){D=null}
+if(!D){$("#erro").hidden=false}
+else{
+  $("#ok").hidden=false;$("#serv").textContent=D.r||"";
+  $("#cli").textContent=D.n||"";$("#val").textContent=$("#val2").textContent=brl(D.v);
+  $("#ref").textContent="Mensalidade de "+MESES[D.m]+"/"+D.y;
+  const code=brcode({chave:chavePix(D.t,D.k),nome:D.q,cidade:D.c,valor:+D.v,msg:D.x,txid:D.i});
+  $("#cc").value=code;
+  try{const q=qrcode(0,"H");q.addData(code);q.make();$("#qr").innerHTML=q.createSvgTag({cellSize:5,margin:2})+'<img src="../logo.png" alt="">'}catch(e){$("#qr").innerHTML='<p class="info">QR Code indisponível. Use o Copia e Cola.</p>'}
+  $("#tch").textContent="Chave PIX ("+(TIPOS[D.t]||"chave")+")";$("#ch").textContent=D.k;
+  $("#fav").innerHTML="Favorecido: <b></b>"+(D.b?"<br>Banco: <b></b>":"");const bs=$("#fav").querySelectorAll("b");bs[0].textContent=D.f||D.q;if(D.b)bs[1].textContent=D.b;
+  document.querySelectorAll(".opt").forEach(o=>o.onclick=()=>{document.querySelectorAll(".opt").forEach(x=>x.classList.toggle("on",x===o));
+    $("#pqr").hidden=o.dataset.o!=="qr";$("#pch").hidden=o.dataset.o!=="chave";(o.dataset.o==="qr"?$("#pqr"):$("#pch")).scrollIntoView({behavior:"smooth",block:"start"})});
+  $("#bcc").onclick=()=>copiar(code,"Código PIX copiado. Cole no app do banco.");
+  $("#bch").onclick=()=>copiar(D.k,"Chave PIX copiada.");
+}
+</script>
+</body>
+</html>

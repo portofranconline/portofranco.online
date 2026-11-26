@@ -47,6 +47,7 @@ Para trazer mudanças feitas no Excel para o sistema: **Tabelas › Subir Excel*
 - **💬 Cobrar** em cada cliente vencido ou a vencer: abre o WhatsApp do cliente com a mensagem pronta (valor, vencimento e chave PIX) e marca "cobrado em". Textos e PIX em Configurações.
 - Resumo do **Funil de vendas**.
 - **💠 PIX:** gera QR Code e copia e cola no valor do contrato (editável), por segmento; envia no WhatsApp; **✅ Confirmar recebimento** lança o pagamento no mês e gera o recibo em PDF numerado (Configurações › PIX por segmento).
+- **🔗 Link de pagamento:** página pública `pagar/` (sem acesso aos dados); o cliente abre e escolhe pagar por QR Code ou chave PIX.
 - Destaque de **vencidos** e **a vencer** da Publicidade e do Painel de LED (mesma regra da aba Vencimentos).
 - Botões **Exportar Excel**, **Enviar propostas** (copiar links e WhatsApp), **Configurações** e **Baixar cópia dos dados** (arquivo .json usado para atualizar os artefatos no Claude).
 
