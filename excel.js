@@ -4,6 +4,12 @@
    O formato da planilha só muda quando o modelo for trocado. */
 (function () {
   "use strict";
+  /* "Cliente desde" vai junto das observações, sem mudar o formato da planilha */
+  function obsCom(c) {
+    var d = /^\d{4}-\d{2}$/.test(c.desde || "") ? "Cliente desde " + c.desde.slice(5) + "/" + c.desde.slice(0, 4) : "";
+    var o = (c.obs || "").replace(/^Cliente desde \d{2}\/\d{4}( · )?/, "");
+    return d && o ? d + " · " + o : (d || o);
+  }
   var BASE = (document.currentScript && document.currentScript.src) ? document.currentScript.src.replace(/excel\.js(\?.*)?$/, "") : "";
   var CFG = {
     painel: { doc: "painel/main", bin: "modelos/painel.bin", nome: "CONTROLE PAINEL.xlsx", cli: "CLIENTES PAINEL", ctl: "CONTROLE PAINEL ", max: 100 },
@@ -130,8 +136,8 @@
     var cc = {};
     C.forEach(function (c) {
       cc[6 + (+c.id)] = mod === "painel"
-        ? { A: +c.id, B: c.nome || "", C: c.cob || "", D: c.resp || "", E: c.tel || "", F: c.ig || "", I: ser(c.ini), N: c.status || "", P: c.obs || "" }
-        : { A: +c.id, B: c.nome || "", D: c.resp || "", E: c.tel || "", F: c.ig || "", G: c.plano || "", H: isN(c.valor) ? c.valor : "", I: ser(c.ini), J: c.dia || "", M: c.status || "", O: c.obs || "" };
+        ? { A: +c.id, B: c.nome || "", C: c.cob || "", D: c.resp || "", E: c.tel || "", F: c.ig || "", I: ser(c.ini), N: c.status || "", P: obsCom(c) }
+        : { A: +c.id, B: c.nome || "", D: c.resp || "", E: c.tel || "", F: c.ig || "", G: c.plano || "", H: isN(c.valor) ? c.valor : "", I: ser(c.ini), J: c.dia || "", M: c.status || "", O: obsCom(c) };
     });
     await aplicar(cfg.cli, cc);
     // pagamentos por ano (só as abas que existem na planilha)
