@@ -66,7 +66,7 @@ a.card.fn{display:block;text-decoration:none;color:var(--tx)}.fe{display:grid;gr
 .fe span{font-size:18px}.fe b{display:block;font-size:20px}.fe small{display:block;font-size:10.5px;color:var(--mu);line-height:1.1}
 #pxsheet{position:fixed;inset:0;background:rgba(11,31,58,.55);display:none;align-items:center;z-index:20;padding:10px}#pxsheet.on{display:flex}
 #pxbox{background:#fff;border-radius:16px;padding:16px;width:100%;max-width:520px;margin:auto;max-height:94vh;overflow:auto}
-.pxqr{display:flex;justify-content:center;margin:12px 0}.pxqr svg{width:220px;height:220px}
+.pxqr{display:flex;justify-content:center;margin:12px 0}.pxqr svg{width:240px;height:240px;display:block}.pxqrw{position:relative}.pxqrw img{position:absolute;left:50%;top:50%;width:62px;height:62px;object-fit:contain;transform:translate(-50%,-50%);background:#fff;border-radius:12px;padding:4px;box-shadow:0 0 0 3px #fff}
 .pxb{border:0;border-radius:10px;background:#32bcad;color:#fff;font-weight:800;font-size:12px;padding:7px 9px;cursor:pointer;white-space:nowrap}
 .okbox{background:#dcf5ea;color:#12805c;font-weight:800;border-radius:12px;padding:12px;margin-top:10px}
 details.pxcfg{margin-top:12px;border:1px solid #e6ecf4;border-radius:12px;padding:10px}details.pxcfg summary{font-weight:800;cursor:pointer}.pxseg{margin-top:10px;padding-top:6px;border-top:1px dashed #e6ecf4}
@@ -311,7 +311,7 @@ function abrirPix(mod,id,c,y,m){const seg=mod.split("/")[0],P=CFG.px[seg],ch=cha
   const val=()=>parseFloat(String($("#pxv").value).replace(/\./g,"").replace(",","."))||0,ref=()=>$("#pxm").value.split("-").map(Number);
   const gerar=()=>{const [ay,am]=ref(),txid=(seg==="online"?"PFO":"LED")+id+"M"+(am+1)+"A"+String(ay).slice(2);
     const code=brcode({chave,nome:P.nome,cidade:CFG.cidade,valor:val(),msg:(P.msg?P.msg+" ":"")+MESES_N[am].slice(0,3)+"/"+ay,txid});
-    $("#pxcc").value=code;try{const q=qrcode(0,"M");q.addData(code);q.make();$("#pxqr").innerHTML=q.createSvgTag({cellSize:5,margin:2})}catch(err){$("#pxqr").innerHTML='<p class="mu">QR Code indisponível (sem internet?). Use o copia e cola.</p>'}return code};
+    $("#pxcc").value=code;try{const q=qrcode(0,"H");q.addData(code);q.make();$("#pxqr").innerHTML='<div class="pxqrw">'+q.createSvgTag({cellSize:5,margin:2})+'<img src="logo.png" alt=""></div>'}catch(err){$("#pxqr").innerHTML='<p class="mu">QR Code indisponível (sem internet?). Use o copia e cola.</p>'}return code};
   gerar();$("#pxv").oninput=gerar;$("#pxm").onchange=gerar;$("#pxx").onclick=()=>sh.classList.remove("on");
   $("#pxcp").onclick=async()=>{try{await navigator.clipboard.writeText($("#pxcc").value);toast("Código PIX copiado.")}catch(err){$("#pxcc").select();toast("Copie o código selecionado.")}};
   $("#pxwa").onclick=()=>{let f=telefone(c.tel);if(!f){const t=prompt("WhatsApp de "+c.nome+" (com DDD):");if(!t)return;f=telefone(t);if(!f)return toast("Número inválido.")}
