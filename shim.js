@@ -95,6 +95,7 @@
       get: async function () { return snapDoc(id, await lerDoc(id)); },
       set: async function (data, opts) {
         if (opts && opts.merge) return this.update(data);
+        var ant = await lerDoc(id); conferir(ant && ant.data, data);
         var r = await client().from("app_docs").upsert({ id: id, data: data, updated_at: new Date().toISOString() });
         if (r.error) throw new Error(traduzir(r.error));
         atualizarTodos(id);
@@ -103,6 +104,7 @@
         /* junta o que mudou com o que já existe (em todos os níveis), sem apagar o resto */
         var atual = await lerDoc(id);
         var novo = juntar(atual && atual.data ? atual.data : {}, patch || {});
+        conferir(atual && atual.data, novo);
         var r = await client().from("app_docs").upsert({ id: id, data: novo, updated_at: new Date().toISOString() });
         if (r.error) throw new Error(traduzir(r.error));
         atualizarTodos(id);
@@ -111,6 +113,7 @@
       substituir: async function (campos) {
         var atual = await lerDoc(id);
         var novo = Object.assign({}, atual && atual.data ? atual.data : {}, campos || {});
+        conferir(atual && atual.data, novo);
         var r = await client().from("app_docs").upsert({ id: id, data: novo, updated_at: new Date().toISOString() });
         if (r.error) throw new Error(traduzir(r.error));
         atualizarTodos(id);
@@ -130,6 +133,12 @@
       out[k] = (ehObj(v) && ehObj(out[k])) ? juntar(out[k], v) : v;
     });
     return out;
+  }
+  /* proteção: não deixa uma gravação sumir com vários clientes de uma vez */
+  function conferir(antes, depois) {
+    var a = antes && antes.clientes && typeof antes.clientes === "object" ? Object.keys(antes.clientes).length : 0;
+    var d = depois && depois.clientes && typeof depois.clientes === "object" ? Object.keys(depois.clientes).length : 0;
+    if (a >= 3 && d < a - 1) throw new Error("Gravação bloqueada para proteger os dados: ela apagaria " + (a - d) + " clientes. Recarregue a página e tente de novo.");
   }
   function traduzir(e) {
     var m = (e && (e.message || e.details)) || String(e);
